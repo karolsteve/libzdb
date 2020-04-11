@@ -248,7 +248,7 @@ static void _setQueryTimeout(T C, int ms) {
                         C->svc = NULL;
                         Thread_join(C->watchdog);
                         C->svc = t;
-                        C->watchdog = NULL;
+                        C->watchdog = 0;
                 }
         }
 }
