@@ -25,6 +25,7 @@
 #define _ZDBPP_H_
 
 #include "zdb.h"
+#include <tuple>
 #include <string>
 #include <utility>
 #include <stdexcept>
