@@ -68,10 +68,13 @@ bool Str_isByteEqual(const char *a, const char *b) {
 
 
 bool Str_startsWith(const char *a, const char *b) {
-	if (a && b) {
-	        do 
-	                if (*a++ != *b++) return false;
-                while (*b);
+        if (a && b) {
+                do {
+                        if (*a != *b)
+                                return false;
+                        if (*a++ == 0 || *b++ == 0)
+                                break;
+                } while (*b);
                 return true;
         }
         return false;
