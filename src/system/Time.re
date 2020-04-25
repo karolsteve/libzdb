@@ -186,6 +186,7 @@ struct tm *Time_toDateTime(const char *s, struct tm *t) {
                  re2c:define:YYLIMIT  = limit;
                  re2c:define:YYMARKER = marker;
                  re2c:yyfill:enable   = 0;
+                 re2c:eof             = 0;
                  
                  any    = [\000-\377];
                  x      = [^0-9];
@@ -194,6 +195,11 @@ struct tm *Time_toDateTime(const char *s, struct tm *t) {
                  tz     = [-+]dd(.? dd)?;
                  frac   = [.,][0-9]+;
                  
+                 $
+                 { // EOF
+                        THROW(AssertException, "Invalid date or time");
+                 }
+
                  yyyy x dd x dd
                  { // Date: YYYY-MM-DD
                         tm.tm_year  = _a2i(token, 4);
