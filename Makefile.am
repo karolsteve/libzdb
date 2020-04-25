@@ -11,7 +11,7 @@ EXTRA_DIST      = README AUTHORS CHANGES COPYING bootstrap doc test src tools co
 LIBRARY_NAME    = zdb
 
 RE2C		= @RE2C@
-RE2CFLAGS       = -b
+RE2CFLAGS       = -i
 FILTERH         = ./tools/bin/filterh
 
 AM_CPPFLAGS     = $(CPPFLAGS) $(DBCPPFLAGS)

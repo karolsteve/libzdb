@@ -60,7 +60,7 @@
 			outputFiles = (
 				"$(DERIVED_FILES_DIR)/$(INPUT_FILE_BASE).c",
 			);
-			script = "/opt/local/bin/re2c -bi ${INPUT_FILE_PATH} > ${DERIVED_FILES_DIR}/${INPUT_FILE_BASE}.c";
+			script = "/opt/local/bin/re2c -i ${INPUT_FILE_PATH} > ${DERIVED_FILES_DIR}/${INPUT_FILE_BASE}.c\n";
 		};
 /* End PBXBuildRule section */
 
