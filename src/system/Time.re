@@ -131,6 +131,8 @@ time_t timegm(struct tm *tm)
 #endif
 
 #define _i2a(i) (x[0] = ((i) / 10) + '0', x[1] = ((i) % 10) + '0')
+#define _isValidDate ((tm.tm_mday < 32 && tm.tm_mday >= 1) && (tm.tm_mon < 12 && tm.tm_mon >= 0))
+#define _isValidTime ((tm.tm_hour < 24 && tm.tm_hour >= 0) && (tm.tm_min < 60 && tm.tm_min >= 0) && (tm.tm_sec < 61 && tm.tm_sec >= 0))
 
 
 /* --------------------------------------------------------------- Private */
@@ -141,6 +143,16 @@ static inline int _a2i(const char *a, int l) {
         for (; *a && l--; a++)
                 n = n * 10 + (*a - '0');
         return n;
+}
+
+static inline int _m2i(const char m[static 3]) {
+        char month[3] = {[0] = tolower(m[0]), [1] = tolower(m[1]), [2] = tolower(m[2])};
+        static char *months = "janfebmaraprmayjunjulaugsepoctnovdec";
+        for (int i = 0; i < 34; i += 3) {
+                if (memcmp(months + i, month, 3) == 0)
+                        return i / 3;
+        }
+        return 0;
 }
 
 
@@ -169,7 +181,7 @@ struct tm *Time_toDateTime(const char *s, struct tm *t) {
         assert(t);
         assert(s);
         struct tm tm = {.tm_isdst = -1}; 
-        int have_date = false, have_time = false;
+        bool have_date = false, have_time = false;
         const char *limit = s + strlen(s), *marker, *token, *cursor = s;
 	while (true) {
 		if (cursor >= limit) {
@@ -181,12 +193,13 @@ struct tm *Time_toDateTime(const char *s, struct tm *t) {
                 }
                 token = cursor;
                 /*!re2c
-                 re2c:define:YYCTYPE  = "unsigned char";
-                 re2c:define:YYCURSOR = cursor;
-                 re2c:define:YYLIMIT  = limit;
-                 re2c:define:YYMARKER = marker;
-                 re2c:yyfill:enable   = 0;
-                 re2c:eof             = 0;
+                 re2c:define:YYCTYPE            = "unsigned char";
+                 re2c:define:YYCURSOR           = cursor;
+                 re2c:define:YYLIMIT            = limit;
+                 re2c:define:YYMARKER           = marker;
+                 re2c:yyfill:enable             = 0;
+                 re2c:eof                       = 0;
+                 re2c:flags:case-insensitive    = 1;
                  
                  any    = [\000-\377];
                  x      = [^0-9];
@@ -194,7 +207,8 @@ struct tm *Time_toDateTime(const char *s, struct tm *t) {
                  yyyy   = [0-9]{4};
                  tz     = [-+]dd(.? dd)?;
                  frac   = [.,][0-9]+;
-                 
+                 mmm    = ("jan"|"feb"|"mar"|"apr"|"may"|"jun"|"jul"|"aug"|"sep"|"oct"|"nov"|"dec");
+
                  $
                  { // EOF
                         THROW(AssertException, "Invalid date or time");
@@ -202,26 +216,34 @@ struct tm *Time_toDateTime(const char *s, struct tm *t) {
 
                  yyyy x dd x dd
                  { // Date: YYYY-MM-DD
-                        tm.tm_year  = _a2i(token, 4);
-                        tm.tm_mon   = _a2i(token + 5, 2) - 1;
-                        tm.tm_mday  = _a2i(token + 8, 2);
-                        have_date = true;
+                        tm.tm_year = _a2i(token, 4);
+                        tm.tm_mon  = _a2i(token + 5, 2) - 1;
+                        tm.tm_mday = _a2i(token + 8, 2);
+                        have_date  = _isValidDate;
                         continue;
                  }
                  yyyy dd dd
                  { // Compressed Date: YYYYMMDD
-                        tm.tm_year  = _a2i(token, 4);
-                        tm.tm_mon   = _a2i(token + 4, 2) - 1;
-                        tm.tm_mday  = _a2i(token + 6, 2);
-                        have_date = true;
+                        tm.tm_year = _a2i(token, 4);
+                        tm.tm_mon  = _a2i(token + 4, 2) - 1;
+                        tm.tm_mday = _a2i(token + 6, 2);
+                        have_date  = _isValidDate;
                         continue;
                  }
                  dd x dd x yyyy
                  { // Date: dd/mm/yyyy
-                        tm.tm_mday  = _a2i(token, 2);
-                        tm.tm_mon   = _a2i(token + 3, 2) - 1;
-                        tm.tm_year  = _a2i(token + 6, 4);
-                        have_date = true;
+                        tm.tm_mday = _a2i(token, 2);
+                        tm.tm_mon  = _a2i(token + 3, 2) - 1;
+                        tm.tm_year = _a2i(token + 6, 4);
+                        have_date  = _isValidDate;
+                        continue;
+                 }
+                 dd x mmm x yyyy
+                 { // Date: Parse date part of RFC 7231 IMF-fixdate (HTTP date), e.g. Sun, 06 Nov 1994 08:49:37 GMT
+                        tm.tm_mday = _a2i(token, 2);
+                        tm.tm_mon  = _m2i(token + 3);
+                        tm.tm_year = _a2i(token + 7, 4);
+                        have_date  = _isValidDate;
                         continue;
                  }
                  dd x dd x dd frac?
@@ -229,7 +251,7 @@ struct tm *Time_toDateTime(const char *s, struct tm *t) {
                         tm.tm_hour = _a2i(token, 2);
                         tm.tm_min  = _a2i(token + 3, 2);
                         tm.tm_sec  = _a2i(token + 6, 2);
-                        have_time = true;
+                        have_time  = _isValidTime;
                         continue;
                  }
                  dd dd dd frac?
@@ -237,7 +259,7 @@ struct tm *Time_toDateTime(const char *s, struct tm *t) {
                         tm.tm_hour = _a2i(token, 2);
                         tm.tm_min  = _a2i(token + 2, 2);
                         tm.tm_sec  = _a2i(token + 4, 2);
-                        have_time = true;
+                        have_time  = _isValidTime;
                         continue;
                  }
                  dd ':' dd
@@ -245,7 +267,7 @@ struct tm *Time_toDateTime(const char *s, struct tm *t) {
                         tm.tm_hour = _a2i(token, 2);
                         tm.tm_min  = _a2i(token + 3, 2);
                         tm.tm_sec  = 0;
-                        have_time = true;
+                        have_time  = _isValidTime;
                         continue;
                  }
                  tz

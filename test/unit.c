@@ -276,9 +276,17 @@ static void testTime() {
                 // Date without time, tz should not be set
                 assert(Time_toDateTime("2013-12-15-0800 ", &t));
                 assert(t.TM_GMTOFF == 0);
+                // RFC 7231 IMF-fixdate (HTTP date)
+                assert(Time_toDateTime("Sun, 06 Nov 1994 08:49:37 GMT", &t));
+                assert(t.tm_year == 1994);
+                assert(t.tm_mon  == 10);
+                assert(t.tm_mday == 6);
+                assert(t.tm_hour == 8);
+                assert(t.tm_min  == 49);
+                assert(t.tm_sec  == 37);
                 // Invalid date
                 TRY {
-                        Time_toDateTime("1901-123-45 123:234", &t);
+                        Time_toDateTime("1901-13-15", &t);
                         printf("\t Test Failed\n");
                         exit(1);
                 } CATCH (SQLException) {
@@ -314,9 +322,12 @@ static void testTime() {
                 // Old metric style
                 t = Time_toTimestamp("15/12/2013 00:12");
                 assert(t == 1387066320);
+                // RFC 7231 IMF-fixdate (HTTP date)
+                t = Time_toTimestamp("Sun, 15 Dec 2013 00:12:58 GMT");
+                assert(t == 1387066378);
                 // Invalid timestamp string
                 TRY {
-                        Time_toTimestamp("1901-123-45");
+                        Time_toTimestamp("2013-13-15 25:12:58");
                         // Should not come here
                         printf("\t Test Failed\n");
                         exit(1);
