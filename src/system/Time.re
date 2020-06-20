@@ -152,7 +152,7 @@ static inline int _m2i(const char m[static 3]) {
                 if (memcmp(months + i, month, 3) == 0)
                         return i / 3;
         }
-        return 0;
+        return -1;
 }
 
 
