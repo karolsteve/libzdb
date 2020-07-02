@@ -241,6 +241,7 @@ static PreparedStatement_T _prepareStatement(T C, const char *sql, va_list ap) {
         C->lastError = C->res ? PQresultStatus(C->res) : PGRES_FATAL_ERROR;
         if (C->lastError == PGRES_EMPTY_QUERY || C->lastError == PGRES_COMMAND_OK || C->lastError == PGRES_TUPLES_OK)
 		return PreparedStatement_new(PostgresqlPreparedStatement_new(C->delegator, C->db, name, paramCount), (Pop_T)&postgresqlpops);
+        FREE(name);
         return NULL;
 }
 
