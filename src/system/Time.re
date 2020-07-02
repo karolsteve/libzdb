@@ -193,25 +193,25 @@ struct tm *Time_toDateTime(const char *s, struct tm *t) {
                 }
                 token = cursor;
                 /*!re2c
-                 re2c:define:YYCTYPE            = "unsigned char";
-                 re2c:define:YYCURSOR           = cursor;
-                 re2c:define:YYLIMIT            = limit;
-                 re2c:define:YYMARKER           = marker;
-                 re2c:yyfill:enable             = 0;
-                 re2c:eof                       = 0;
-                 re2c:flags:case-insensitive    = 1;
+                 re2c:define:YYCTYPE         = "unsigned char";
+                 re2c:define:YYCURSOR        = cursor;
+                 re2c:define:YYLIMIT         = limit;
+                 re2c:define:YYMARKER        = marker;
+                 re2c:yyfill:enable          = 0;
+                 re2c:eof                    = 0;
+                 re2c:flags:case-insensitive = 1;
                  
-                 any    = [\000-\377];
-                 x      = [^0-9];
-                 dd     = [0-9][0-9];
-                 yyyy   = [0-9]{4};
-                 tz     = [-+]dd(.? dd)?;
-                 frac   = [.,][0-9]+;
-                 mmm    = ("jan"|"feb"|"mar"|"apr"|"may"|"jun"|"jul"|"aug"|"sep"|"oct"|"nov"|"dec");
+                 any  = [\000-\377];
+                 x    = [^0-9];
+                 dd   = [0-9][0-9];
+                 yyyy = [0-9]{4};
+                 tz   = [-+]dd(.? dd)?;
+                 frac = [.,][0-9]+;
+                 mmm  = ("jan"|"feb"|"mar"|"apr"|"may"|"jun"|"jul"|"aug"|"sep"|"oct"|"nov"|"dec");
 
                  $
                  { // EOF
-                        THROW(AssertException, "Invalid date or time");
+                        THROW(SQLException, "Invalid date or time");
                  }
 
                  yyyy x dd x dd
