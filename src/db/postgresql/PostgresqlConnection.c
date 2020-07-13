@@ -27,7 +27,11 @@
 
 #include <stdio.h>
 #include <string.h>
+#ifdef HAVE_STDATOMIC_H
 #include <stdatomic.h>
+#else
+#define _Atomic(x) volatile x
+#endif
 
 #include "PostgresqlAdapter.h"
 #include "StringBuffer.h"
