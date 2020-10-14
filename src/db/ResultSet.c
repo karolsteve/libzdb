@@ -65,10 +65,6 @@ static inline int _getIndex(T R, const char *name) {
 /* ----------------------------------------------------- Protected methods */
 
 
-#ifdef PACKAGE_PROTECTED
-#pragma GCC visibility push(hidden)
-#endif
-
 T ResultSet_new(ResultSetDelegate_T D, Rop_T op) {
 	T R;
 	assert(D);
@@ -85,10 +81,6 @@ void ResultSet_free(T *R) {
         (*R)->op->free(&((*R)->D));
 	FREE(*R);
 }
-
-#ifdef PACKAGE_PROTECTED
-#pragma GCC visibility pop
-#endif
 
 
 /* ------------------------------------------------------------ Properties */

@@ -121,14 +121,14 @@ typedef struct PreparedStatement_S *T;
  * @param op delegate operations
  * @return A new PreparedStatement object
  */
-T PreparedStatement_new(PreparedStatementDelegate_T D, Pop_T op);
+T PreparedStatement_new(PreparedStatementDelegate_T D, Pop_T op) __attribute__ ((visibility("hidden")));
 
 
 /**
  * Destroy a PreparedStatement and release allocated resources.
  * @param P A PreparedStatement object reference
  */
-void PreparedStatement_free(T *P);
+void PreparedStatement_free(T *P) __attribute__ ((visibility("hidden")));
 
 //>> End Protected methods
 

@@ -129,10 +129,6 @@ static void _freePrepared(T C) {
 /* ----------------------------------------------------- Protected methods */
 
 
-#ifdef PACKAGE_PROTECTED
-#pragma GCC visibility push(hidden)
-#endif
-
 T Connection_new(void *pool, char **error) {
         assert(pool);
         T C;
@@ -186,10 +182,6 @@ bool Connection_isInTransaction(T C) {
         assert(C);
         return (C->isInTransaction > 0);
 }
-
-#ifdef PACKAGE_PROTECTED
-#pragma GCC visibility pop
-#endif
 
 
 /* ------------------------------------------------------------ Properties */

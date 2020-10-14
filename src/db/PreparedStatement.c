@@ -61,10 +61,6 @@ static void _clearResultSet(T P) {
 /* ----------------------------------------------------- Protected methods */
 
 
-#ifdef PACKAGE_PROTECTED
-#pragma GCC visibility push(hidden)
-#endif
-
 T PreparedStatement_new(PreparedStatementDelegate_T D, Pop_T op) {
 	T P;
 	assert(D);
@@ -82,10 +78,6 @@ void PreparedStatement_free(T *P) {
         (*P)->op->free(&((*P)->D));
 	FREE(*P);
 }
-
-#ifdef PACKAGE_PROTECTED
-#pragma GCC visibility pop
-#endif
 
 
 /* ------------------------------------------------------------ Parameters */

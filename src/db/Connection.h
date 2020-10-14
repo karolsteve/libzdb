@@ -75,14 +75,14 @@ typedef struct Connection_S *T;
  * @param error Connection error or NULL if no error was found
  * @return A new Connection object or NULL on error
  */
-T Connection_new(void *pool, char **error);
+T Connection_new(void *pool, char **error) __attribute__ ((visibility("hidden")));
 
 
 /**
  * Destroy a Connection and release allocated resources.
  * @param C A Connection object reference
  */
-void Connection_free(T *C);
+void Connection_free(T *C) __attribute__ ((visibility("hidden")));
 
 
 /**
@@ -90,7 +90,7 @@ void Connection_free(T *C);
  * @param C A Connection object
  * @param isAvailable true if this Connection is available otherwise false
  */
-void Connection_setAvailable(T C, int isAvailable);
+void Connection_setAvailable(T C, int isAvailable) __attribute__ ((visibility("hidden")));
 
 
 /**
@@ -98,7 +98,7 @@ void Connection_setAvailable(T C, int isAvailable);
  * @param C A Connection object
  * @return true If this Connection is available otherwise false
  */
-bool Connection_isAvailable(T C);
+bool Connection_isAvailable(T C) __attribute__ ((visibility("hidden")));
 
 
 /**
@@ -109,7 +109,7 @@ bool Connection_isAvailable(T C);
  * @param C A Connection object
  * @return The last time (seconds) this Connection was accessed
  */
-time_t Connection_getLastAccessedTime(T C);
+time_t Connection_getLastAccessedTime(T C) __attribute__ ((visibility("hidden")));
 
 
 /**
@@ -118,7 +118,7 @@ time_t Connection_getLastAccessedTime(T C);
  * @param C A Connection object
  * @return true if this Connection is in a transaction otherwise false
  */
-bool Connection_isInTransaction(T C);
+bool Connection_isInTransaction(T C) __attribute__ ((visibility("hidden")));
 
 
 //>> End Protected methods

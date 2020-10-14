@@ -114,14 +114,14 @@ typedef struct ResultSet_S *T;
  * @param op delegate operations
  * @return A new ResultSet object
  */
-T ResultSet_new(ResultSetDelegate_T D, Rop_T op);
+T ResultSet_new(ResultSetDelegate_T D, Rop_T op) __attribute__ ((visibility("hidden")));
 
 
 /**
  * Destroy a ResultSet and release allocated resources.
  * @param R A ResultSet object reference
  */
-void ResultSet_free(T *R);
+void ResultSet_free(T *R) __attribute__ ((visibility("hidden")));
 
 //>> End Protected methods
 
