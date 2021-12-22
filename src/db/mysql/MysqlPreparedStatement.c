@@ -251,6 +251,5 @@ const struct Pop_T mysqlpops = {
         .executeQuery   = _executeQuery,
         .rowsChanged    = _rowsChanged,
         .parameterCount = _parameterCount
-
 };
 
