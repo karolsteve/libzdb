@@ -76,7 +76,7 @@ static void testQuery(ConnectionPool& pool) {
 static void testException(ConnectionPool& pool) {
         try {
                 Connection con = pool.getConnection();
-                PreparedStatement p = con.prepareStatement("blablablabla ?;", "Bla");
+                PreparedStatement p = con.prepareStatement("blablablabla ?", "bla");
                 p.execute();
                 std::cout << "Test failed, did not get exception\n";
                 exit(1);
@@ -84,7 +84,7 @@ static void testException(ConnectionPool& pool) {
 
         try {
                 Connection con = pool.getConnection();
-                ResultSet r = con.executeQuery("blablabala ? ;", "bla!");
+                ResultSet r = con.executeQuery("blablabala");
                 r.next();
                 std::cout << "Test failed, did not get exception\n";
                 exit(1);
