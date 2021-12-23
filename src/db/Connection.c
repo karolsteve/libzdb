@@ -159,7 +159,7 @@ void Connection_free(T *C) {
 }
 
 
-void Connection_setAvailable(T C, int isAvailable) {
+void Connection_setAvailable(T C, bool isAvailable) {
         assert(C);
         C->isAvailable = isAvailable;
         C->lastAccessedTime = Time_now();

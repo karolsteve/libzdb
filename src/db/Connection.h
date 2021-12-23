@@ -90,7 +90,7 @@ void Connection_free(T *C) __attribute__ ((visibility("hidden")));
  * @param C A Connection object
  * @param isAvailable true if this Connection is available otherwise false
  */
-void Connection_setAvailable(T C, int isAvailable) __attribute__ ((visibility("hidden")));
+void Connection_setAvailable(T C, bool isAvailable) __attribute__ ((visibility("hidden")));
 
 
 /**

@@ -51,8 +51,8 @@
 #define T ConnectionPool_T
 struct ConnectionPool_S {
         URL_T url;
-        int filled;
-        int doSweep;
+        bool filled;
+        bool doSweep;
         char *error;
         Sem_T alarm;
 	Mutex_T mutex;
@@ -60,7 +60,7 @@ struct ConnectionPool_S {
         Thread_T reaper;
         int sweepInterval;
 	int maxConnections;
-        volatile int stopped;
+        volatile bool stopped;
         int connectionTimeout;
 	int initialConnections;
 };
@@ -297,7 +297,7 @@ void ConnectionPool_start(T P) {
 
 
 void ConnectionPool_stop(T P) {
-        int stopSweep = false;
+        bool stopSweep = false;
         assert(P);
         LOCK(P->mutex)
         {
