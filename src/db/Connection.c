@@ -119,6 +119,7 @@ static bool _setDelegate(T C, char **error) {
 
 
 static void _freePrepared(T C) {
+        assert(C->prepared);
         while (! Vector_isEmpty(C->prepared)) {
                 PreparedStatement_T ps = Vector_pop(C->prepared);
                 PreparedStatement_free(&ps);
@@ -246,7 +247,8 @@ void Connection_clear(T C) {
         assert(C);
         if (C->resultSet)
                 ResultSet_free(&C->resultSet);
-        _freePrepared(C);
+        if (C->prepared)
+                _freePrepared(C);
         // Set properties back to default values
         C->maxRows = 0;
         if (C->queryTimeout != 0)
