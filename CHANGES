@@ -2,6 +2,15 @@
 
               This file summarizes changes made since 1.0
 
+Version 3.2.3
+-------------
+* Fix: In C++ guard against stopping the Connection Pool with active
+  Connections. I.e. all Connections should be returned to the pool
+  before explicitly atempting to stop the pool. This is due to how
+  C++ destructors are called at scope end; if there is a reference
+  to a live Connection object after the pool is stopped it might cause
+  a dealloc sequence problem.
+
 Version 3.2.2
 -------------
 * Fix: Removed Thread.h from the API. This is an internal interface
