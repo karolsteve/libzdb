@@ -548,6 +548,9 @@ namespace zdb {
         }
         
         void stop() {
+            if (this->active() > 0) {
+                throw sql_exception("Trying to stop the pool with active Connections. Please close all active Connections first");
+            }
             ConnectionPool_stop(t_);
         }
         
