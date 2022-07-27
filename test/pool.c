@@ -166,14 +166,19 @@ static void testPool(const char *testURL) {
                 Connection_T con = ConnectionPool_getConnection(pool);
                 assert(con);
                 // 1. Prepared statement, perform a nonsense update to test rowsChanged
-                PreparedStatement_T p1 = Connection_prepareStatement(con, "update zild_t set image=?;");
-                PreparedStatement_setString(p1, 1, "");
+                PreparedStatement_T p1 = Connection_prepareStatement(con, "update zild_t set image=?");
+                // Update with a "new" value as MariaDB will not update columns where the new value is
+                // the same as the old value. This creates the possibility that mysql_stmt_affected_rows()
+                // and PreparedStatement_rowsChanged() may not actually equal the number of rows matched,
+                // only the number of rows that were literally affected by the query.
+                // Ref Issue #50: https://bitbucket.org/tildeslash/libzdb/issues/50/tests-assertexception
+                PreparedStatement_setString(p1, 1, "xxx");
                 PreparedStatement_execute(p1);
                 printf("\tRows changed: %lld\n", PreparedStatement_rowsChanged(p1));
                 // Assert that all 12 rows in the data set was changed
                 assert(PreparedStatement_rowsChanged(p1) == 12);
                 // 2. Prepared statement, update the table proper with "images". 
-                PreparedStatement_T pre = Connection_prepareStatement(con, "update zild_t set image=? where id=?;");
+                PreparedStatement_T pre = Connection_prepareStatement(con, "update zild_t set image=? where id=?");
                 assert(pre);
                 assert(PreparedStatement_getParameterCount(pre) == 2);
                 for (i = 0; images[i]; i++) {
