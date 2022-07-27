@@ -10,6 +10,10 @@ Version 3.2.3
   C++ destructors are called at scope end; if there is a reference
   to a live Connection object after the pool is stopped it might cause
   a dealloc sequence problem.
+  
+* Fixed: Issue #50 where unit test 5 failed for MariaDB related to
+  that mysql_stmt_affected_rows() only returns actual affected rows,
+  not matched rows which MySQL does.
 
 Version 3.2.2
 -------------
