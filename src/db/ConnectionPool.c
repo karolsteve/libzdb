@@ -103,6 +103,45 @@ static bool _fillPool(T P) {
 }
 
 
+static Connection_T _getConnectionWithError(T P, char error[static STRLEN]) {
+        Connection_T con = NULL;
+        *error = 0;
+        LOCK(P->mutex)
+        {
+                int size = Vector_size(P->pool);
+                for (int i = 0; i < size; i++) {
+                        con = Vector_get(P->pool, i);
+                        if (Connection_isAvailable(con)) {
+                                if (Connection_ping(con)) {
+                                        Connection_setAvailable(con, false);
+                                        goto done;
+                                }
+                        }
+                }
+                con = NULL;
+                if (size < P->maxConnections) {
+                        con = Connection_new(P, &P->error);
+                        if (con) {
+                                Connection_setAvailable(con, false);
+                                Vector_push(P->pool, con);
+                        } else {
+                                snprintf(error, STRLEN - 1, "Failed to create a connection -- %s",
+                                         STR_UNDEF(P->error) ? "unknown error" : P->error);
+                                FREE(P->error);
+                        }
+                } else {
+                        snprintf(error, STRLEN - 1, "Failed to create a connection -- max connections reached");
+                }
+        }
+done:
+        END_LOCK;
+        if (!con) {
+                DEBUG("%s\n", error);
+        }
+        return con;
+}
+
+
 static int _getActive(T P){
         int i, n = 0, size = Vector_size(P->pool);
         for (i = 0; i < size; i++)
@@ -318,35 +357,19 @@ void ConnectionPool_stop(T P) {
 
 
 Connection_T ConnectionPool_getConnection(T P) {
-	Connection_T con = NULL;
-	assert(P);
-	LOCK(P->mutex) 
-        {
-                int size = Vector_size(P->pool);
-                for (int i = 0; i < size; i++) {
-                        con = Vector_get(P->pool, i);
-                        if (Connection_isAvailable(con)) {
-                                if (Connection_ping(con)) {
-                                        Connection_setAvailable(con, false);
-                                        goto done;
-                                }
-                        }
-                }
-                con = NULL;
-                if (size < P->maxConnections) {
-                        con = Connection_new(P, &P->error);
-                        if (con) {
-                                Connection_setAvailable(con, false);
-                                Vector_push(P->pool, con);
-                        } else {
-                                DEBUG("Failed to create connection -- %s\n", P->error);
-                                FREE(P->error);
-                        }
-                }
+        assert(P);
+        return _getConnectionWithError(P, (char[STRLEN]){});
+}
+
+
+Connection_T ConnectionPool_getConnectionOrException(T P) {
+        assert(P);
+        char error[STRLEN] = {};
+        Connection_T con = _getConnectionWithError(P, error);
+        if (!con) {
+                THROW(SQLException, "%s", error);
         }
-done: 
-        END_LOCK;
-	return con;
+        return con;
 }
 
 

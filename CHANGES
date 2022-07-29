@@ -4,6 +4,10 @@
 
 Version 3.2.3
 -------------
+* New: Provide better error reporting if a Connection cannot be
+  obtained from the Connection Pool by introducing the method
+  ConnectionPool_getConnectionOrException(). In C++ the exception
+  thrown now contains the actual cause instead of a generic error.
 * Fix: In C++ guard against stopping the Connection Pool with active
   Connections. I.e. all Connections should be returned to the pool
   before explicitly atempting to stop the pool. This is due to how

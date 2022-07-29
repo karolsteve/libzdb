@@ -417,10 +417,27 @@ void ConnectionPool_stop(T P);
 /**
  * Get a connection from the pool
  * @param P A ConnectionPool object
- * @return A connection from the pool or NULL if maxConnection is reached
+ * @return A connection from the pool or NULL if maxConnection has been
+ * reached or if a database error occurred.
  * @see Connection.h
  */
 Connection_T ConnectionPool_getConnection(T P);
+
+
+/**
+ * Get a connection from the pool or throws an SQL Exception if a connection
+ * cannot be obtained. The method, ConnectionPool_getConnection() above, is
+ * identical except it will return null if the pool is full <strong>or</strong>
+ * if a database error occurs. This method will instead throw an SQL Exception
+ * in both cases with an appropriate error message.
+ * @param P A ConnectionPool object
+ * @return A connection from the pool or NULL if maxConnection has been
+ * reached or if a database error occurred.
+ * @exception SQLException If a database connection cannot be obtained. The
+ * error message is availble in Exception_frame.message
+ * @see Connection.h
+ */
+Connection_T ConnectionPool_getConnectionOrException(T P);
 
 
 /**
