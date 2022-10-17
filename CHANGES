@@ -10,14 +10,13 @@ Version 3.2.3
   thrown now contains the actual cause instead of a generic error.
 * Fix: In C++ guard against stopping the Connection Pool with active
   Connections. I.e. all Connections should be returned to the pool
-  before explicitly atempting to stop the pool. This is due to how
+  before explicitly attempting to stop the pool. This is due to how
   C++ destructors are called at scope end; if there is a reference
   to a live Connection object after the pool is stopped it might cause
-  a dealloc sequence problem.
-  
+  a dealloc sequence problem.  
 * Fixed: Issue #50 where unit test 5 failed for MariaDB related to
-  that mysql_stmt_affected_rows() only returns actual affected rows,
-  not matched rows which MySQL does.
+  mysql_stmt_affected_rows() only returns actual affected rows, not
+  matched rows which MySQL does.
 
 Version 3.2.2
 -------------

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2016 dragon jiang<jianlinlong@gmail.com>
- * Copyright (C) 2019 Tildeslash Ltd.
+ * Copyright (C) 2019-2022 Tildeslash Ltd.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files(the "Software"), to deal
@@ -30,6 +30,87 @@
 #include <utility>
 #include <stdexcept>
 
+/*
+ 
+ This interface contains all the classes and methods that are needed to
+ use libzdb from C++ (C++17 or later). To use libzdb in your C++ project,
+ import zdbpp.h (this interface) and use the namespace zdb:
+
+ #include <zdbpp.h>
+ using namespace zdb;
+ 
+  
+ Query Example
+ -------------
+
+ ConnectionPool pool("mysql://192.168.11.100:3306/test?user=root&password=dba");
+ pool.start();
+ Connection con = pool.getConnection();
+ // Use C++ variadic template feature to bind parameter
+ ResultSet result = con.executeQuery(
+      "select id, name, hired, image from employee where id < ? order by id", 100
+ );
+ // Optionally set row prefetch, default is 100
+ result.setFetchSize(10);
+ while (result.next()) {
+      int id = result.getInt("id");
+      const char *name = result.getString("name");
+      time_t hired = result.getTimestamp("hired");
+      auto [image, size] = result.getBlob("image");
+      ...
+ }
+      
+ 
+ Execute statement
+ -----------------
+
+ Connection con = pool.getConnection();
+ // Any execute or executeQuery statement which takes parameters are
+ // automatically translated into a prepared statement. Here we also
+ // demonstrate how to set a SQL null value by using nullptr
+ con.execute("update employee set image = ? where id = ?", nullptr, 11);
+                 
+ 
+ Test for SQL null value
+ -----------------------
+
+ ResultSet result = con.executeQuery("select name, image from employee");
+ while (result.next()) {
+     if (result.isnull("image")) {
+         ...
+     }
+ }
+ 
+ 
+ Insert Data via Prepared Statement
+ ----------------------------------
+
+ Connection con = pool.getConnection();
+ PreparedStatement prep = con.prepareStatement(
+      "insert into employee (name, hired, image) values(?, ?, ?)"
+ );
+ con.beginTransaction();
+ for (const auto &employee : employees) {
+         // Polymorphic bind
+         prep.bind(1, employee.name);
+         prep.bind(2, employee.hired);
+         prep.bind(3, employee.image);
+         prep.execute();
+ }
+ con.commit();
+         
+ 
+ Exception Handling
+ ------------------
+
+ try {
+     con = pool.getConnection();
+     con.executeQuery("invalid query");
+ } catch (sql_exception& e) {
+     std::cout <<  e.what();
+ }
+
+ */
 
 namespace zdb {
     
@@ -122,6 +203,7 @@ namespace zdb {
         URL_T t_;
     };
     
+
     class ResultSet : private noncopyable
     {
     public:
@@ -207,7 +289,7 @@ namespace zdb {
         template <typename T>
         std::tuple<const void*, int> getBlob(T v) {
             int size = 0;
-            const void *blob = NULL;
+            const void *blob = nullptr;
             if constexpr (std::is_integral<T>::value)
                 except_wrapper( blob = ResultSet_getBlob(t_, v, &size) );
             else
@@ -235,6 +317,7 @@ namespace zdb {
         ResultSet_T t_;
     };
     
+
     class PreparedStatement : private noncopyable
     {
     public:
@@ -334,6 +417,7 @@ namespace zdb {
         PreparedStatement_T t_;
     };
     
+
     class Connection : private noncopyable
     {
     public:
@@ -556,8 +640,8 @@ namespace zdb {
         
         Connection getConnection() {
             except_wrapper(
-                           Connection_T C = ConnectionPool_getConnectionOrException(t_);
-                           RETURN Connection(C);
+                           Connection_T c = ConnectionPool_getConnectionOrException(t_);
+                           RETURN Connection(c);
                            );
         }
         

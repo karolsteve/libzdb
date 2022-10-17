@@ -164,7 +164,7 @@ void Connection_setMaxRows(T C, int max);
  * produced by this Connection object can contain. If this limit is
  * exceeded, the excess rows are silently dropped.
  * @param C A Connection object
- * @return The new max rows limit; 0 means there is no limit
+ * @return The max rows limit; 0 means there is no limit
  */
 int Connection_getMaxRows(T C);
 
