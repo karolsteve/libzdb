@@ -2,7 +2,7 @@
 
 AC_PREREQ([2.53])
 
-AC_INIT([libzdb], [3.2.2], [bugs-libzdb@tildeslash.com]) # update version in zdb.h
+AC_INIT([libzdb], [3.2.3], [bugs-libzdb@tildeslash.com]) # update version in zdb.h
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE
@@ -86,7 +86,7 @@ if test "x$RE2C" = "xno"; then
                 AC_MSG_ERROR([Libzdb require re2c. Download re2c from http://re2c.org/ or use your package manager])
         fi
 fi
-AM_PROG_LEX
+AC_PROG_LEX([noyywrap])
 if test -z "${LEXLIB+set}"; then
         # Require flex unless lex.yy.c already is built
         if test ! -f ./tools/filterh/lex.yy.c; then
@@ -115,7 +115,7 @@ test -f ./tools/bin/filterh || AC_MSG_ERROR([Failed to build tools])
 # Libtool
 # ---------------------------------------------------------------------------
 
-AC_PROG_LIBTOOL
+LT_INIT
 
 # ---------------------------------------------------------------------------
 # Build options
@@ -444,12 +444,6 @@ fi
 
 AC_SUBST(DBLDFLAGS)
 AC_SUBST(DBCPPFLAGS)
-
-# ---------------------------------------------------------------------------
-# Header files
-# ---------------------------------------------------------------------------
-
-AC_HEADER_STDC
 
 # ---------------------------------------------------------------------------
 # Data Types

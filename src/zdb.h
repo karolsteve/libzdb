@@ -39,8 +39,8 @@ extern "C" {
 
 /* -------------------- Version: major * 1000000 + minor * 1000 + revision */
 
-#define LIBZDB_VERSION          "3.2.2"
-#define LIBZDB_VERSION_NUMBER   3002002
+#define LIBZDB_VERSION          "3.2.3"
+#define LIBZDB_VERSION_NUMBER   3002003
 
 /* ------------------------------------------------- libzdb API interfaces */
 
