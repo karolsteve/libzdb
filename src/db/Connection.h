@@ -227,7 +227,8 @@ void Connection_clear(T C);
 
 /**
  * Return connection to the connection pool. The same as calling 
- * ConnectionPool_returnConnection() on a connection.
+ * ConnectionPool_returnConnection() on a connection. If the connection
+ * is in an uncommited transaction, rollback is called.
  * @param C A Connection object
  */
 void Connection_close(T C);
