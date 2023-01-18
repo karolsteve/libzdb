@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2016 dragon jiang<jianlinlong@gmail.com>
- * Copyright (C) 2019-2022 Tildeslash Ltd.
+ * Copyright (C) 2019-2023 Tildeslash Ltd.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files(the "Software"), to deal
