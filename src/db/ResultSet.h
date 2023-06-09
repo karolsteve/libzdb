@@ -413,7 +413,7 @@ const void *ResultSet_getBlobByName(T R, const char *columnName, int *size);
 
 //@}
 
-/** @name Date and Time  */
+/** @name Date and Time */
 //@{
 
 /**
