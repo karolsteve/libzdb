@@ -22,23 +22,23 @@ Exception_T B = {"BException"};
 Exception_T C = {"CException"};
 Exception_T D = {"DException"};
 
-void throwA() {
+void throwA(void) {
         THROW(A, "A");
 }
 
-void throwB() {
+void throwB(void) {
         THROW(B, "B");
 }
 
-void throwC() {
+void throwC(void) {
         THROW(C, "C");
 }
 
-void throwD() {
+void throwD(void) {
         THROW(D, "D");
 }
 
-void indirectA() {
+void indirectA(void) {
         throwA();
 }
 
@@ -308,7 +308,7 @@ int main(void) {
         printf("=> Test11: No exception thrown\n");
         {
                 TRY
-                        int i = 0; i++;
+                        (void)0;
                 ELSE
                         assert(false); // Should not be reached
                 END_TRY;

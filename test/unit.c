@@ -26,7 +26,7 @@ static void abortHandler(const char *error) {
 }
 
 
-static void testStr() {
+static void testStr(void) {
         printf("============> Start Str Tests\n\n");
         
         printf("=> Test1: copy\n");
@@ -128,7 +128,7 @@ static void testStr() {
 }
 
 
-static void testMem() {
+static void testMem(void) {
         printf("============> Start Mem Tests\n\n");
         
         printf("=> Test1: alloc\n");
@@ -163,7 +163,7 @@ static void testMem() {
 }
 
 
-static void testTime() {
+static void testTime(void) {
         printf("============> Start Time Tests\n\n");
                 
         printf("=> Test1: now\n");
@@ -351,7 +351,7 @@ static void testTime() {
 }
 
 
-static void testSystem() {
+static void testSystem(void) {
         printf("============> Start System Tests\n\n");
         
         printf("=> Test1: debug\n");
@@ -383,7 +383,7 @@ static void testSystem() {
 }
 
 
-static void testURL() {
+static void testURL(void) {
         URL_T url;
         printf("============> Start URL Tests\n\n");
         
@@ -571,7 +571,7 @@ static void testURL() {
 }
 
 
-static void testVector() {
+static void testVector(void) {
         Vector_T vector;
         printf("============> Start Vector Tests\n\n");
         
@@ -736,7 +736,7 @@ static void testVector() {
 }
 
 
-static void testStringBuffer() {
+static void testStringBuffer(void) {
         StringBuffer_T sb;
         printf("============> Start StringBuffer Tests\n\n");
         
