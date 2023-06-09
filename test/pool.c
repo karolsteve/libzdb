@@ -592,14 +592,16 @@ static void testPool(const char *testURL) {
                         memset(t, 'x', 4096);
                         t[4095] = 0;
                         for (int i = 0; i < 4; i++) {
-                                PreparedStatement_setBlob(p, 1, t, (i+1)*512); // store successive larger string-blobs to trigger realloc on ResultSet_getBlobByName
+                                // store successive larger string-blobs to trigger realloc on ResultSet_getBlobByName;
+                                // default buffer size is STRLEN and we only realloc more when needed
+                                PreparedStatement_setBlob(p, 1, t, (i+1)*512);
                                 PreparedStatement_setString(p, 2, t);
                                 PreparedStatement_execute(p);
                         }
                         ResultSet_T r = Connection_executeQuery(con, "select image, string from zild_t;");
                         for (int i = 0; ResultSet_next(r); i++) {
                                 ResultSet_getBlobByName(r, "image", &myimagesize);
-                                const char *image = ResultSet_getStringByName(r, "image"); // Blob as image should be terminated
+                                const char *image = ResultSet_getStringByName(r, "image"); // Blob as String is NUL terminated
                                 const char *string = ResultSet_getStringByName(r, "string");
                                 assert(myimagesize == (i+1)*512);
                                 assert(strlen(image) == ((i+1)*512));
