@@ -51,27 +51,12 @@ AC_C_BIGENDIAN
 # -std=cXX compiler switch which only include a minimum of C headers
 CFLAGS="$CFLAGS -D_GNU_SOURCE"
 
-# Compiler; tune warnings and make the char type unsigned
-CFLAGS="$CFLAGS -Wall -Wunused -Wno-unused-label -funsigned-char";
-# does this compiler support -Wno-pointer-sign ?
-svd_CFLAGS="$CFLAGS"
-CFLAGS="-Wno-pointer-sign $CFLAGS"
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [return 0;])], [], [CFLAGS="$svd_CFLAGS"])
-# does this compiler support -Wno-address ?
-svd_CFLAGS="$CFLAGS"
-CFLAGS="-Wno-address $CFLAGS"
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [return 0;])], [], [CFLAGS="$svd_CFLAGS"])
+# Compiler; tune warnings
+CFLAGS="$CFLAGS -Wall -Wunused -Wno-pointer-sign ";
 
 # Require at least C99 and use C11 if available
-AC_RUN_IFELSE(
-[AC_LANG_PROGRAM([], [dnl
-        #ifdef __STDC_VERSION__
-        #if __STDC_VERSION__ >= 201112L
-        return 0;
-        #endif
-        #endif
-        return 1;
-        ])], [CFLAGS="$CFLAGS -std=c11"], [CFLAGS="$CFLAGS -std=c99"])
+AC_COMPUTE_INT([STDC_VERSION],[__STDC_VERSION__],,[STDC_VERSION=0])
+AS_IF([test "$STDC_VERSION" -ge 201112],[CFLAGS="$CFLAGS -std=c11"],[CFLAGS="$CFLAGS -std=c99"])
 AC_CHECK_HEADERS([stdint.h stdbool.h], [], [AC_MSG_ERROR([toolchain does not have C99 headers])])
 AC_CHECK_HEADERS([stdatomic.h])
 

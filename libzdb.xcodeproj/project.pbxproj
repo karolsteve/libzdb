@@ -814,6 +814,7 @@
 				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_IMPLICIT_SIGN_CONVERSION = NO;
 				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
@@ -833,7 +834,7 @@
 				DEVELOPMENT_TEAM = "";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				GCC_CHAR_IS_UNSIGNED_CHAR = YES;
+				GCC_CHAR_IS_UNSIGNED_CHAR = NO;
 				GCC_C_LANGUAGE_STANDARD = c11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_CPP_EXCEPTIONS = NO;
@@ -846,7 +847,9 @@
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
+				GCC_WARN_ABOUT_POINTER_SIGNEDNESS = NO;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_SIGN_COMPARE = YES;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_FUNCTION = YES;
@@ -860,15 +863,8 @@
 					/opt/local/include/openssl/,
 				);
 				LIBRARY_SEARCH_PATHS = "/opt/local/lib/openssl-3/";
-				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				MACOSX_DEPLOYMENT_TARGET = 13.3;
 				ONLY_ACTIVE_ARCH = YES;
-				OTHER_CFLAGS = (
-					"-Wno-pointer-sign",
-					"-Wno-address",
-					"-Wunused",
-					"-Wno-unused-label",
-					"-funsigned-char",
-				);
 				SDKROOT = macosx;
 				USER_HEADER_SEARCH_PATHS = "";
 			};
@@ -887,6 +883,7 @@
 				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_IMPLICIT_SIGN_CONVERSION = NO;
 				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
@@ -906,7 +903,7 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = "";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_CHAR_IS_UNSIGNED_CHAR = YES;
+				GCC_CHAR_IS_UNSIGNED_CHAR = NO;
 				GCC_C_LANGUAGE_STANDARD = c11;
 				GCC_ENABLE_CPP_EXCEPTIONS = NO;
 				GCC_ENABLE_CPP_RTTI = NO;
@@ -916,7 +913,9 @@
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
+				GCC_WARN_ABOUT_POINTER_SIGNEDNESS = NO;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_SIGN_COMPARE = YES;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_FUNCTION = YES;
@@ -930,15 +929,8 @@
 					/opt/local/include/openssl/,
 				);
 				LIBRARY_SEARCH_PATHS = "/opt/local/lib/openssl-3/";
-				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				MACOSX_DEPLOYMENT_TARGET = 13.3;
 				ONLY_ACTIVE_ARCH = YES;
-				OTHER_CFLAGS = (
-					"-Wno-pointer-sign",
-					"-Wno-address",
-					"-Wunused",
-					"-Wno-unused-label",
-					"-funsigned-char",
-				);
 				SDKROOT = macosx;
 				USER_HEADER_SEARCH_PATHS = "";
 			};
@@ -1108,13 +1100,6 @@
 					/opt/local/libexec/openssl3/lib,
 					/opt/local/libexec/openssl11/lib,
 				);
-				OTHER_CFLAGS = (
-					"-Wno-pointer-sign",
-					"-Wno-address",
-					"-Wunused",
-					"-Wno-unused-label",
-					"-funsigned-char",
-				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -1146,13 +1131,6 @@
 					"/usr/local/mysql-8.0.32-macos13-arm64/lib",
 					/opt/local/libexec/openssl3/lib,
 					/opt/local/libexec/openssl11/lib,
-				);
-				OTHER_CFLAGS = (
-					"-Wno-pointer-sign",
-					"-Wno-address",
-					"-Wunused",
-					"-Wno-unused-label",
-					"-funsigned-char",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};

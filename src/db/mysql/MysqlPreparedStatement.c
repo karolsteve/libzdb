@@ -49,7 +49,7 @@ typedef struct param_t {
                 long long llong;
                 MYSQL_TIME timestamp;
         } type;
-        long length;
+        unsigned long length;
 } *param_t;
 #define T PreparedStatementDelegate_T
 struct T {
