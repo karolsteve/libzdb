@@ -311,7 +311,7 @@ void Connection_execute(T C, const char *sql, ...) {
                 ResultSet_free(&C->resultSet);
         va_list ap;
         va_start(ap, sql);
-        int success = C->op->execute(C->D, sql, ap);
+        bool success = C->op->execute(C->D, sql, ap);
         va_end(ap);
         if (! success) THROW(SQLException, "%s", Connection_getLastError(C));
 }
