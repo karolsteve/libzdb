@@ -604,7 +604,7 @@ static void testPool(const char *testURL) {
                                 const char *image = ResultSet_getStringByName(r, "image"); // Blob as String is NUL terminated
                                 const char *string = ResultSet_getStringByName(r, "string");
                                 assert(myimagesize == (i+1)*512);
-                                assert(strlen(image) == ((i+1)*512));
+                                assert((int)strlen(image) == ((i+1)*512));
                                 assert(strlen(string) == 4095);
                         }
                         p = Connection_prepareStatement(con, "select image, string from zild_t;");
@@ -614,7 +614,7 @@ static void testPool(const char *testURL) {
                                 const char *image = ResultSet_getStringByName(r, "image");
                                 const char *string = (char*)ResultSet_getStringByName(r, "string");
                                 assert(myimagesize == (i+1)*512);
-                                assert(strlen(image) == ((i+1)*512));
+                                assert((int)strlen(image) == ((i+1)*512));
                                 assert(strlen(string) == 4095);
                         }
                         Connection_execute(con, "drop table zild_t;");
