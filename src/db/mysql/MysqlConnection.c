@@ -96,8 +96,10 @@ static MYSQL *_doConnect(Connection_T delegator, char **error) {
         // Options
         if (IS(URL_getParameter(url, "compress"), "true"))
                 clientFlags |= CLIENT_COMPRESS;
-        if (IS(URL_getParameter(url, "use-ssl"), "true"))
-                mysql_ssl_set(db, 0,0,0,0,0);
+        if (IS(URL_getParameter(url, "use-ssl"), "true")) {
+                enum mysql_ssl_mode ssl_mode = SSL_MODE_REQUIRED;
+                mysql_options(db, MYSQL_OPT_SSL_MODE, &ssl_mode);
+        }
 #if MYSQL_VERSION_ID < 80000
         if (IS(URL_getParameter(url, "secure-auth"), "true"))
                 mysql_options(db, MYSQL_SECURE_AUTH, (const char*)&yes);
