@@ -97,8 +97,13 @@ static MYSQL *_doConnect(Connection_T delegator, char **error) {
         if (IS(URL_getParameter(url, "compress"), "true"))
                 clientFlags |= CLIENT_COMPRESS;
         if (IS(URL_getParameter(url, "use-ssl"), "true")) {
+#ifndef LIBMARIADB
                 enum mysql_ssl_mode ssl_mode = SSL_MODE_REQUIRED;
                 mysql_options(db, MYSQL_OPT_SSL_MODE, &ssl_mode);
+#else
+                // MariaDB hasn't got the memo that mysql_ssl_set is deprecated
+                mysql_ssl_set(db, 0,0,0,0,0);
+#endif
         }
 #if MYSQL_VERSION_ID < 80000
         if (IS(URL_getParameter(url, "secure-auth"), "true"))
