@@ -26,6 +26,7 @@
 #include "Config.h"
 
 #include <stdio.h>
+#include <math.h>
 
 #include "Vector.h"
 
@@ -54,7 +55,7 @@ struct T {
 
 static inline void _ensureCapacity(T V) {
         if (V->length >= V->capacity) {
-                V->capacity = 2 * V->length;
+                V->capacity = round(1.618 * V->length);
 		RESIZE(V->array, V->capacity * sizeof (void *));
         }
 }
