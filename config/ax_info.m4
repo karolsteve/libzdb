@@ -52,9 +52,9 @@ AC_DEFUN([AX_INFO_ENABLED],
         fmt=""
     fi
     if $($2); then
-        printf "|  %-45.45s %-21.21s  |\n" "$1" "$(tput setaf 2 ${fmt})ENABLED$(tput sgr0)"
+        printf "|  %-46s %-21s |\n" "$1" "$(tput setaf 2 ${fmt})ENABLED$(tput sgr0)"
     else
-        printf "|  %-45.45s %-21.21s  |\n" "$1" "$(tput setaf 8 ${fmt})DISABLED$(tput sgr0)"
+        printf "|  %-46s %-21s |\n" "$1" "$(tput setaf 8 ${fmt})DISABLED$(tput sgr0)"
     fi
 ])
 
