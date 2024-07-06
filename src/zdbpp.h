@@ -29,6 +29,9 @@
 #include <string>
 #include <utility>
 #include <stdexcept>
+#include <ctime>
+#include <type_traits>
+#include <cstdint>
 
 /*
  
@@ -122,6 +125,9 @@ namespace zdb {
         {}
     };
     
+    // Type alias for a type that's always the same size as time_t
+    using time_t_equiv = std::conditional_t<sizeof(time_t) == sizeof(int64_t), int64_t, int32_t>;
+
 #define except_wrapper(f) TRY { f; } ELSE {throw sql_exception(Exception_frame.message);} END_TRY
     
     struct noncopyable
@@ -403,9 +409,19 @@ namespace zdb {
             this->setDouble(parameterIndex, x);
         }
         
+        #if (__SIZEOF_LONG_LONG__ != 8)
+        // Usage example for 32-bit systems:
+        // bind(1, static_cast<time_t_equiv>(your_time_t_value));
+        void bind(int parameterIndex, time_t_equiv x) {
+            this->setTimestamp(parameterIndex, static_cast<time_t>(x));
+        }
+        #else
+        // Usage example for 64-bit systems:
+        // bind(1, your_time_t_value);
         void bind(int parameterIndex, time_t x) {
             this->setTimestamp(parameterIndex, x);
         }
+        #endif
         
         //blob
         void bind(int parameterIndex, std::tuple<const void *, int> x) {

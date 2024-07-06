@@ -168,7 +168,7 @@ static void testTime(void) {
                 
         printf("=> Test1: now\n");
         {
-                printf("\tResult: %ld\n", Time_now());
+                printf("\tResult: %lld\n", (long long)Time_now());
         }
         printf("=> Test1: OK\n\n");
 

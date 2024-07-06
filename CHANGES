@@ -2,6 +2,10 @@
 
               This file summarizes changes made since 1.0
 
+Version 3.2.4
+-------------
+* Fix: Compile errors on 32-bits platforms
+
 Version 3.2.3
 -------------
 * New: Provide better error reporting if a Connection cannot be

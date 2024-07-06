@@ -604,7 +604,7 @@ static void testPool(const char *testURL) {
                                 const char *image = ResultSet_getStringByName(r, "image"); // Blob as String is NUL terminated
                                 const char *string = ResultSet_getStringByName(r, "string");
                                 assert(myimagesize == (i+1)*512);
-                                assert(strlen(image) == ((i+1)*512));
+                                assert(strlen(image) == (size_t)((i+1)*512));
                                 assert(strlen(string) == 4095);
                         }
                         p = Connection_prepareStatement(con, "select image, string from zild_t;");
@@ -614,7 +614,7 @@ static void testPool(const char *testURL) {
                                 const char *image = ResultSet_getStringByName(r, "image");
                                 const char *string = (char*)ResultSet_getStringByName(r, "string");
                                 assert(myimagesize == (i+1)*512);
-                                assert(strlen(image) == ((i+1)*512));
+                                assert(strlen(image) == (size_t)((i+1)*512));
                                 assert(strlen(string) == 4095);
                         }
                         Connection_execute(con, "drop table zild_t;");
@@ -691,11 +691,11 @@ static void testPool(const char *testURL) {
                         assert(timestampAsTm.tm_sec == 58);
                         assert(timestampAsTm.TM_GMTOFF == 0);
                         // Result
-                        printf("\tDate: %s, Time: %s, DateTime: %s\n\tTimestamp as numeric: %ld, Timestamp as string: %s\n",
+                        printf("\tDate: %s, Time: %s, DateTime: %s\n\tTimestamp as numeric: %lld, Timestamp as string: %s\n",
                                ResultSet_getString(r, 1),
                                ResultSet_getString(r, 2),
                                ResultSet_getString(r, 3),
-                               ResultSet_getTimestamp(r, 4),
+                               (long long)ResultSet_getTimestamp(r, 4),
                                ResultSet_getString(r, 4)); // SQLite will show both as numeric
                 }
                 Connection_execute(con, "drop table zild_t;");
