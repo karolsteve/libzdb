@@ -407,18 +407,17 @@ namespace zdb {
         }
         
         #if defined(__LP64__)
-        // Usage example for 64-bit systems:
-        // bind(1, your_time_t_value);
         void bind(int parameterIndex, time_t x) {
             this->setTimestamp(parameterIndex, x);
         }
         #else
-        // Type alias for a type that's always the same size as time_t
-        using time_t_equiv = std::conditional_t<sizeof(time_t) == sizeof(int64_t), int64_t, int32_t>;
-        // Usage example for 32-bit systems:
-        // bind(1, static_cast<time_t_equiv>(your_time_t_value));
-        void bind(int parameterIndex, time_t_equiv x) {
-            this->setTimestamp(parameterIndex, static_cast<time_t>(x));
+        // On 32-bit systems where time_t is defined as long long
+        // we use SFINAE to conditionally enable the bind function
+        // template for the time_t type
+        template<typename T>
+        std::enable_if_t<std::is_same_v<T, time_t>, void>
+        bind(int parameterIndex, T x) {
+            this->setTimestamp(parameterIndex, x);
         }
         #endif
         
