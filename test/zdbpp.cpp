@@ -39,7 +39,7 @@ static void testPrepared(ConnectionPool& pool) {
         PreparedStatement p1 = con.prepareStatement("insert into zild_t (name, percent, image) values(?, ?, ?);");
         con.beginTransaction();
         for (const auto &[name, image] : data) {
-                percent += 1 + percent;
+                percent += 1.12;
                 p1.bind(1, name);
                 p1.bind(2, percent);
                 p1.bind(3, std::tuple{image.c_str(), int(image.length() + 1)}); // include terminating \0

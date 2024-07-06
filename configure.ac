@@ -106,6 +106,8 @@ LT_INIT
 # Build options
 # ---------------------------------------------------------------------------
 
+DBLDFLAGS="-lm "
+
 AC_ARG_ENABLE(optimized,
         AS_HELP_STRING([--enable-optimized],
                 [Build software optimized]),
