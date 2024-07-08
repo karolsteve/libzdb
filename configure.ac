@@ -47,18 +47,41 @@ AC_PROG_CC
 AC_PROG_CXX
 AC_C_CONST
 AC_C_BIGENDIAN
-# Define _GNU_SOURCE so we can have Posix headers etc included. We use the
-# -std=cXX compiler switch which only include a minimum of C headers
-CFLAGS="$CFLAGS -D_GNU_SOURCE"
+
+AS_IF([test "`uname`" != "Darwin"],
+  [
+        # Not Darwin, so use _GNU_SOURCE
+        CFLAGS="$CFLAGS -D_GNU_SOURCE"
+  ],
+  [
+        # On Darwin, use _DARWIN_C_SOURCE and _POSIX_C_SOURCE
+        CFLAGS="$CFLAGS -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=199506L"
+  ]
+)
 
 # Compiler; tune warnings
-CFLAGS="$CFLAGS -Wall -Wunused -Wno-pointer-sign ";
+CFLAGS="$CFLAGS -Wall -Wunused";
+# Allow intermix unsigned char and char
+CFLAGS="$CFLAGS -Wno-pointer-sign";
 
-# Require at least C99 and use C11 if available
+# enable fortification level 2
+CFLAGS="$CFLAGS -D_FORTIFY_SOURCE=2"
+
+# Require C11 and use C17 if available
 AC_COMPUTE_INT([STDC_VERSION],[__STDC_VERSION__],,[STDC_VERSION=0])
-AS_IF([test "$STDC_VERSION" -ge 201112],[CFLAGS="$CFLAGS -std=c11"],[CFLAGS="$CFLAGS -std=c99"])
+AS_IF([test "$STDC_VERSION" -ge 201710],
+    [CFLAGS="$CFLAGS -std=c17"],
+    [AS_IF([test "$STDC_VERSION" -ge 201112],
+        [CFLAGS="$CFLAGS -std=c11"],
+        [AC_MSG_ERROR([Your compiler does not support C11 or later])]
+    )]
+)
+
+# Check for C99 headers
 AC_CHECK_HEADERS([stdint.h stdbool.h], [], [AC_MSG_ERROR([toolchain does not have C99 headers])])
-AC_CHECK_HEADERS([stdatomic.h])
+
+# Check for C11 atomic operations support
+AC_CHECK_HEADERS([stdatomic.h], [], [AC_MSG_ERROR([toolchain does not support C11 atomic operations])])
 
 # ---------------------------------------------------------------------------
 # Programs
