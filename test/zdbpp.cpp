@@ -2,8 +2,10 @@
 #include <iostream>
 #include <string>
 #include <map>
+#include <ctime>
 
 #include "zdbpp.h"
+
 using namespace zdb;
 
 const std::map<std::string, std::string> data {
@@ -21,11 +23,18 @@ const std::map<std::string, std::string> data {
 };
 
 const std::map<std::string, std::string> schema {
-        { "mysql", "CREATE TABLE zild_t(id INTEGER AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255), percent REAL, image BLOB);"},
-        { "postgresql", "CREATE TABLE zild_t(id SERIAL PRIMARY KEY, name VARCHAR(255), percent REAL, image BYTEA);"},
-        { "sqlite", "CREATE TABLE zild_t(id INTEGER PRIMARY KEY, name VARCHAR(255), percent REAL, image BLOB);"},
-        { "oracle", "CREATE TABLE zild_t(id NUMBER GENERATED AS IDENTITY, name VARCHAR(255), percent REAL, image CLOB);"}
+        { "mysql", "CREATE TABLE zild_t(id INTEGER AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255), percent REAL, image BLOB, created_at TIMESTAMP);" },
+        { "postgresql", "CREATE TABLE zild_t(id SERIAL PRIMARY KEY, name VARCHAR(255), percent REAL, image BYTEA, created_at TIMESTAMP);" },
+        { "sqlite", "CREATE TABLE zild_t(id INTEGER PRIMARY KEY, name VARCHAR(255), percent REAL, image BLOB, created_at INTEGER);" },
+        { "oracle", "CREATE TABLE zild_t(id NUMBER GENERATED AS IDENTITY, name VARCHAR(255), percent REAL, image BLOB, created_at TIMESTAMP);" }
 };
+
+static std::string time2iso8601(time_t time) {
+    struct tm *tm = gmtime(&time);
+    char buffer[30];
+    strftime(buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%SZ", tm);
+    return std::string(buffer);
+}
 
 static void testCreateSchema(ConnectionPool& pool) {
         Connection con = pool.getConnection();
@@ -36,13 +45,14 @@ static void testCreateSchema(ConnectionPool& pool) {
 static void testPrepared(ConnectionPool& pool) {
         double percent = 0.12;
         Connection con = pool.getConnection();
-        PreparedStatement p1 = con.prepareStatement("insert into zild_t (name, percent, image) values(?, ?, ?);");
+        PreparedStatement p1 = con.prepareStatement("insert into zild_t (name, percent, image, created_at) values(?, ?, ?, ?);");
         con.beginTransaction();
         for (const auto &[name, image] : data) {
                 percent += 1.12;
                 p1.bind(1, name);
                 p1.bind(2, percent);
                 p1.bind(3, std::tuple{image.c_str(), int(image.length() + 1)}); // include terminating \0
+                p1.bind(4, std::time(nullptr));
                 p1.execute();
         }
         // Implicit prepared statement. Any execute or executeQuery statement which
@@ -56,16 +66,22 @@ static void testPrepared(ConnectionPool& pool) {
 static void testQuery(ConnectionPool& pool) {
         Connection con = pool.getConnection();
         // Implicit prepared statement because of parameters
-        ResultSet result = con.executeQuery("select id, name, percent, image from zild_t where id < ? order by id;", 100);
+        ResultSet result = con.executeQuery("select id, name, percent, image, created_at from zild_t where id < ? order by id;", 100);
         result.setFetchSize(10); // Optionally set prefetched rows. Default is 100
-        assert(result.columnCount() == 4);
+        assert(result.columnCount() == 5);
         assert(std::string(result.columnName(1)) == "id");
         while (result.next()) {
                 int id = result.getInt(1);
                 const char *name = result.getString("name");
                 double percent = result.getDouble("percent");
                 auto [image, size] = result.getBlob("image");
-                printf("\t%-5d%-20s%-10.2f%-16.38s\n", id, name ? name : "null", percent, size ? (char *)image : "null");
+                std::string created_at = time2iso8601(result.getTimestamp("created_at"));
+                printf("  %-4d%-15s%-7.2f%-29s%s\n",
+                       id,
+                       name ? name : "null",
+                       percent,
+                       size ? (char *)image : "null",
+                       created_at.c_str());
                 // Assert that SQL null above was set
                 if (id == 11) {
                     assert(result.isnull(4));
