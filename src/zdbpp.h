@@ -406,21 +406,13 @@ namespace zdb {
             this->setDouble(parameterIndex, x);
         }
         
-        #if defined(__LP64__)
-        void bind(int parameterIndex, time_t x) {
-            this->setTimestamp(parameterIndex, x);
-        }
-        #else
-        // On 32-bit systems where time_t is defined as long long
-        // we use SFINAE to conditionally enable the bind function
-        // template for the time_t type
+        // Template for time_t to avoid conflicts with long long bind() on 32-bit systems
         template<typename T>
-        std::enable_if_t<std::is_same_v<T, time_t>, void>
+        std::enable_if_t<std::is_same_v<T, time_t> && !std::is_same_v<T, long long>, void>
         bind(int parameterIndex, T x) {
             this->setTimestamp(parameterIndex, x);
         }
-        #endif
-        
+
         //blob
         void bind(int parameterIndex, std::tuple<const void *, int> x) {
             auto [blob, size] = x;
