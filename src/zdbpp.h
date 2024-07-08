@@ -291,9 +291,11 @@ namespace zdb {
         
         template <typename T>
         std::tuple<const void*, int> getBlob(T v) {
+            static_assert(std::is_same_v<T, int> || std::is_same_v<T, const char*>,
+                          "T must be either int or const char*");
             int size = 0;
             const void *blob = nullptr;
-            if constexpr (std::is_integral<T>::value)
+            if constexpr (std::is_same_v<T, int>)
                 except_wrapper( blob = ResultSet_getBlob(t_, v, &size) );
             else
                 except_wrapper( blob = ResultSet_getBlobByName(t_, v, &size) );
@@ -406,14 +408,16 @@ namespace zdb {
             this->setDouble(parameterIndex, x);
         }
         
-        // Template for time_t to avoid conflicts with long long bind() on 32-bit systems
+        // Template for time_t. SFINAE prevents instantiation for non-time_t types,
+        // avoiding overload ambiguity. On (32-bits) systems where time_t is long long
+        // you might want to use static_cast<time_t>(t) to guarantee this overload.
         template<typename T>
-        std::enable_if_t<std::is_same_v<T, time_t> && !std::is_same_v<T, long long>, void>
+        std::enable_if_t<std::is_same_v<T, time_t>, void>
         bind(int parameterIndex, T x) {
             this->setTimestamp(parameterIndex, x);
         }
 
-        //blob
+        // blob
         void bind(int parameterIndex, std::tuple<const void *, int> x) {
             auto [blob, size] = x;
             this->setBlob(parameterIndex, blob, size);
