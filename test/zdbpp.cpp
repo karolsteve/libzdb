@@ -52,7 +52,7 @@ static void testPrepared(ConnectionPool& pool) {
                 p1.bind(1, name);
                 p1.bind(2, percent);
                 p1.bind(3, std::tuple{image.c_str(), int(image.length() + 1)}); // include terminating \0
-                p1.bind(4, std::time(nullptr));
+                p1.bind(4, static_cast<time_t>(std::time(nullptr)));
                 p1.execute();
         }
         // Implicit prepared statement. Any execute or executeQuery statement which
