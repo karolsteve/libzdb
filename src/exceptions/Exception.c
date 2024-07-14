@@ -85,6 +85,12 @@ void Exception_init(void) { Thread_once(once_control, init_once); }
 
 /* -------------------------------------------------------- Public methods */
 
+
+void Exception_reset(void) {
+        ThreadData_set(Exception_stack, NULL);
+}
+
+
 #ifndef ZILD_PACKAGE_PROTECTED
 
 void Exception_throw(const T *e, const char *func, const char *file, int line, const char *cause, ...) {

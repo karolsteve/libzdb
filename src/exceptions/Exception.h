@@ -218,6 +218,7 @@ struct Exception_Frame {
 enum { Exception_entered=0, Exception_thrown, Exception_handled, Exception_finalized };
 extern pthread_key_t Exception_stack;
 void Exception_init(void);
+void Exception_reset(void);
 void Exception_throw(const T *e, const char *func, const char *file, int line, const char *cause, ...) CLANG_ANALYZER_NORETURN;
 #define pop_Exception_stack pthread_setspecific(Exception_stack, ((Exception_Frame*)pthread_getspecific(Exception_stack))->prev)
 /** @endcond */
