@@ -219,7 +219,7 @@ namespace zdb {
      * Example: `http://user:password@www.foo.bar:8080/document/index.csp?querystring#ref`
      * Supports IPv6 as defined in RFC2732.
      */
-    class URL : private noncopyable {
+    class URL {
     public:
         /**
          * @brief Create a new URL object from the URL parameter string.
@@ -230,6 +230,47 @@ namespace zdb {
             if (!t_) throw sql_exception("Invalid URL");
         }
         
+        /**
+         * @brief Copy constructor.
+         * @param other URL object to copy.
+         */
+        URL(const URL& other) : t_(URL_new(URL_toString(other.t_))) {
+            if (!t_) throw sql_exception("Failed to copy URL");
+        }
+        
+        /**
+         * @brief Move constructor.
+         * @param other URL object to move.
+         */
+        URL(URL&& other) noexcept : t_(other.t_) {
+            other.t_ = nullptr;
+        }
+        
+        /**
+         * @brief Copy assignment operator.
+         * @param other URL object to copy assign.
+         */
+        URL& operator=(const URL& other) {
+            if (this != &other) {
+                URL tmp(other);
+                std::swap(t_, tmp.t_);
+            }
+            return *this;
+        }
+        
+        /**
+         * @brief Move assignment operator.
+         * @param other URL object to move assign.
+         */
+        URL& operator=(URL&& other) noexcept {
+            if (this != &other) {
+                if (t_) URL_free(&t_);
+                t_ = other.t_;
+                other.t_ = nullptr;
+            }
+            return *this;
+        }
+
         /**
          * @brief Destroy the URL object.
          */
@@ -1073,14 +1114,25 @@ namespace zdb {
      */
     class ConnectionPool : private noncopyable {
     public:
-        using AbortHandler = std::function<void(std::string_view)>;
-
         /**
-         * @brief Constructs a ConnectionPool with the given URL.
-         * @param url The database connection URL.
+         * @brief Constructs a ConnectionPool with the given URL string.
+         * @param url The database connection URL string.
          * @throws sql_exception If the URL is invalid.
          */
         explicit ConnectionPool(const std::string& url) : url_(url) {
+            if (!url_)
+                throw sql_exception("Invalid URL");
+            t_ = ConnectionPool_new(url_);
+        }
+        
+        /**
+         * @brief Constructs a ConnectionPool by taking ownership of the given URL object.
+         * @param url The database connection URL object to move from.
+         * @throws sql_exception If the URL is invalid.
+         * @note After this operation, the passed URL object is left in a valid but unspecified state.
+         *       It's safe to destroy or reassign the moved-from URL object, but using its value is undefined.
+         */
+        explicit ConnectionPool(URL&& url) : url_(std::move(url)) {
             if (!url_)
                 throw sql_exception("Invalid URL");
             t_ = ConnectionPool_new(url_);
@@ -1151,6 +1203,8 @@ namespace zdb {
             return ConnectionPool_getConnectionTimeout(t_);
         }
         
+        using AbortHandler = std::function<void(std::string_view)>;
+
         /**
          * @brief Set the function to call if a fatal error occurs in the library
          * In practice this means Out-Of-Memory errors or uncatched exceptions.
