@@ -126,12 +126,14 @@ long long Time_milli(void);
 
 
 /**
- * This method suspend the calling process or Thread for
- * <code>u</code> micro seconds.
- * @param u Micro seconds to sleep
- * @return true
+ * Suspends the calling process or thread for the specified
+ * duration in microseconds. If sleep is interrupted by a signal,
+ * the function aborts sleep and returns false.
+ * @param microseconds The duration of the sleep in microseconds.
+ * @return true if sleep was completed, false if sleep was interrupted
+ * by a signal.
  */
-bool Time_usleep(long u);
+bool Time_usleep(long long microseconds);
 
 //@}
 

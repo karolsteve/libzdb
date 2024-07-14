@@ -341,12 +341,17 @@ long long Time_milli(void) {
 }
 
 
-bool Time_usleep(long u) {
-        struct timeval t;
-        t.tv_sec = u / USEC_PER_SEC;
-        t.tv_usec = (suseconds_t)(u % USEC_PER_SEC);
-        select(0, 0, 0, 0, &t);
-        return true;
+bool Time_usleep(long long microseconds) {
+    struct timespec req, rem;
+    req.tv_sec = microseconds / 1000000LL;
+    req.tv_nsec = (microseconds % 1000000LL) * 1000LL;
+    while (nanosleep(&req, &rem) == -1) {
+        if (errno == EINTR) {
+            return false;
+        }
+        req = rem;
+    }
+    return true;
 }
 
 
