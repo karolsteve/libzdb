@@ -119,6 +119,12 @@ void PreparedStatement_setTimestamp(T P, int parameterIndex, time_t x) {
 }
 
 
+void PreparedStatement_setNull(T P, int parameterIndex) {
+        assert(P);
+        PreparedStatement_setString(P, parameterIndex, NULL);
+}
+
+
 /* -------------------------------------------------------- Public methods */
 
 

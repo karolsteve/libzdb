@@ -232,6 +232,19 @@ void PreparedStatement_setBlob(T P, int parameterIndex, const void *x, int size)
  */
 void PreparedStatement_setTimestamp(T P, int parameterIndex, time_t x);
 
+
+/**
+ * Sets the <i>in</i> parameter at index <code>parameterIndex</code> to
+ * SQL NULL.
+ * @param P A PreparedStatement object
+ * @param parameterIndex The first parameter is 1, the second is 2,..
+ * @exception SQLException If a database access error occurs or if parameter
+ * index is out of range
+ * @see SQLException.h
+ */
+void PreparedStatement_setNull(T P, int parameterIndex);
+
+
 //@}
 
 /**
