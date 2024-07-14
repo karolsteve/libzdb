@@ -168,7 +168,7 @@ static void testDropSchema(ConnectionPool& pool) {
 }
 
 int main() {
-    const char* help =
+    auto help =
     "Please enter a valid database connection URL and press ENTER\n"
     "E.g. sqlite:///tmp/sqlite.db?synchronous=off&heap_limit=2000\n"
     "E.g. mysql://localhost:3306/test?user=root&password=root\n"
@@ -179,14 +179,15 @@ int main() {
     for (std::string line; std::getline(std::cin, line);) {
         if (line == "q" || line == ".")
             break;
+        std::optional<URL> url_opt;
         try {
-            URL url(line);
+            url_opt = URL(line);
         } catch(...) {
             std::cout << "Please enter a valid database URL or stop by entering '.'\n\n";
             std::cout << "Connection URL> ";
             continue;
         }
-        ConnectionPool pool(line);
+        ConnectionPool pool(std::move(*url_opt));
         pool.start();
         std::cout << std::string(8, '=') + "> Start Tests\n";
         testCreateSchema(pool);
