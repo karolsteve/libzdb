@@ -77,6 +77,20 @@ AS_IF([test "$STDC_VERSION" -ge 201710],
     )]
 )
 
+# Require C++20 or later
+# Doing this manually as AC_COMPUTE_INT does not work
+AC_LANG_PUSH([C++])
+AC_MSG_CHECKING([for C++20 support])
+echo 'int main() { return 0; }' > t.cpp
+if ${CXX} -std=c++20 t.cpp -o t 2>/dev/null; then
+    CXXFLAGS="$CXXFLAGS -std=c++20"
+    AC_MSG_RESULT([yes])
+else
+    AC_MSG_ERROR([Your compiler does not support C++20 or later])
+fi
+rm -f t.cpp conftest
+AC_LANG_POP([C++])
+
 # Check for C99 headers
 AC_CHECK_HEADERS([stdint.h stdbool.h], [], [AC_MSG_ERROR([toolchain does not have C99 headers])])
 
