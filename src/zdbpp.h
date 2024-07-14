@@ -1,6 +1,6 @@
 /*
+ * Copyright (C) 2019-2024 Tildeslash Ltd.
  * Copyright (C) 2016 dragon jiang<jianlinlong@gmail.com>
- * Copyright (C) 2019-2023 Tildeslash Ltd.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files(the "Software"), to deal
@@ -25,645 +25,1216 @@
 #define _ZDBPP_H_
 
 #include "zdb.h"
-#include <tuple>
 #include <string>
 #include <utility>
 #include <stdexcept>
 #include <ctime>
 #include <type_traits>
 #include <cstdint>
+#include <optional>
+#include <memory>
+#include <span>
+#include <variant>
 
 /*
+# zdbpp.h - C++ Interface for libzdb
  
- This interface contains all the classes and methods that are needed to
- use libzdb from C++ (C++17 or later). To use libzdb in your C++ project,
- import zdbpp.h (this interface) and use the namespace zdb:
+ Libzdb as a small, easy to use Open Source Database Connection Pool Library
+ with the following features:
+ 
+ - Thread safe Database Connection Pool
+ - Connect to multiple database systems simultaneously
+ - Zero runtime configuration, connect using a URL scheme
+ - Supports MySQL, PostgreSQL, SQLite and Oracle
 
+This interface provides a C++ wrapper for libzdb and offers a convenient and
+type-safe way to interact with various SQL databases from C++ applications.
+
+## Features
+ 
+ - Object-oriented wrapper around libzdb
+ - Exception-based error handling
+ - RAII-compliant resource management
+ - Type-safe parameter binding for prepared statements
+ - Connection pooling
+ - Thread-safe design
+ - Modern C++ features (C++20 or later required)
+ 
+## Usage
+
+To use libzdb in your C++ project, include zdbpp.h and use the `zdb` namespace:
+
+```cpp
  #include <zdbpp.h>
  using namespace zdb;
- 
-  
- Query Example
- -------------
+```
 
+## Examples
+
+### Query Execution
+
+```cpp
  ConnectionPool pool("mysql://192.168.11.100:3306/test?user=root&password=dba");
  pool.start();
  Connection con = pool.getConnection();
- // Use C++ variadic template feature to bind parameter
+ 
+ // Use C++ variadic template feature to bind parameters
  ResultSet result = con.executeQuery(
-      "select id, name, hired, image from employee where id < ? order by id", 100
+     "SELECT id, name, hired, image FROM employee WHERE id < ? ORDER BY id", 100
  );
+ 
  // Optionally set row prefetch, default is 100
  result.setFetchSize(10);
- while (result.next()) {
-      int id = result.getInt("id");
-      const char *name = result.getString("name");
-      time_t hired = result.getTimestamp("hired");
-      auto [image, size] = result.getBlob("image");
-      ...
- }
-      
  
- Execute statement
- -----------------
-
- Connection con = pool.getConnection();
- // Any execute or executeQuery statement which takes parameters are
- // automatically translated into a prepared statement. Here we also
- // demonstrate how to set a SQL null value by using nullptr
- con.execute("update employee set image = ? where id = ?", nullptr, 11);
-                 
- 
- Test for SQL null value
- -----------------------
-
- ResultSet result = con.executeQuery("select name, image from employee");
  while (result.next()) {
-     if (result.isnull("image")) {
-         ...
+     int id = result.getInt("id");
+     auto name = result.getString("name").value_or("N/A");
+     auto hired = result.getTimestamp("hired");
+     auto blob = result.getBlob("image");
+     if (blob) {
+         // Process image data...
      }
+     // ...
  }
- 
- 
- Insert Data via Prepared Statement
- ----------------------------------
+```
 
- Connection con = pool.getConnection();
- PreparedStatement prep = con.prepareStatement(
-      "insert into employee (name, hired, image) values(?, ?, ?)"
- );
- con.beginTransaction();
- for (const auto &employee : employees) {
-         // Polymorphic bind
-         prep.bind(1, employee.name);
-         prep.bind(2, employee.hired);
-         prep.bind(3, employee.image);
-         prep.execute();
- }
- con.commit();
-         
- 
- Exception Handling
- ------------------
+### Execute Statement
 
- try {
-     con = pool.getConnection();
-     con.executeQuery("invalid query");
- } catch (sql_exception& e) {
-     std::cout <<  e.what();
- }
+```cpp
+Connection con = pool.getConnection();
+// Any execute or executeQuery statement which takes parameters are
+// automatically translated into a prepared statement. Here we also
+// demonstrate how to set a SQL null value by using nullptr
+con.execute("UPDATE employee SET image = ? WHERE id = ?", nullptr, 11);
+```
 
- */
+### Test for SQL NULL Value
+
+```cpp
+ResultSet result = con.executeQuery("SELECT name, image FROM employee");
+while (result.next()) {
+    if (result.isNull("image")) {
+        // Handle NULL image...
+    }
+}
+```
+
+### Insert Data via Prepared Statement
+
+```cpp
+Connection con = pool.getConnection();
+PreparedStatement prep = con.prepareStatement(
+    "INSERT INTO employee (name, hired, image) VALUES (?, ?, ?)"
+);
+
+con.beginTransaction();
+for (const auto &employee : employees) {
+    // Polymorphic bind
+    prep.bind(1, employee.name);
+    prep.bind(2, employee.hired);
+    prep.bind(3, std::make_tuple(employee.image.data(), employee.image.size()));
+    prep.execute();
+}
+con.commit();
+```
+
+### Exception Handling
+
+```cpp
+try {
+    Connection con = pool.getConnection();
+    con.executeQuery("INVALID QUERY");
+} catch (const sql_exception& e) {
+    std::cout << "SQL error: " << e.what() << std::endl;
+}
+```
+
+## Key Classes
+
+- `URL`: Represents a database connection URL
+- `ResultSet`: Represents a database result set
+- `PreparedStatement`: Represents a pre-compiled SQL statement
+- `Connection`: Represents a database connection
+- `ConnectionPool`: Manages a pool of database connections
+
+For detailed API documentation, refer to the comments for each class in this header file.
+Visit [libzd's homepage](https://www.tildeslash.com/libzdb/) for more documentation and examples.
+*/
 
 namespace zdb {
+    namespace {
+        #define except_wrapper(f) TRY { f; } ELSE { throw sql_exception(Exception_frame.message); } END_TRY
+        
+        std::optional<std::string_view> _to_optional(const char* str) {
+            return str ? std::optional<std::string_view>{str} : std::nullopt;
+        }
+        
+        std::function<void(std::string_view)> g_abortHandler;
+        
+        void bridgeAbortHandler(const char* error) {
+            if (g_abortHandler) {
+                g_abortHandler(error);
+            }
+        }
+
+        struct noncopyable {
+            noncopyable() = default;
+            noncopyable(const noncopyable&) = delete;
+            noncopyable& operator=(const noncopyable&) = delete;
+            noncopyable(noncopyable&&) = delete;
+            noncopyable& operator=(noncopyable&&) = delete;
+        };
+    } // anonymous namespace
     
-    class sql_exception : public std::runtime_error
-    {
+    
+    /**
+     * @class sql_exception
+     * @brief Exception class for SQL related errors.
+     *
+     * Thrown for SQL errors. Inherits from `std::runtime_error`.
+     *
+     * Example:
+     * @code
+     * try {
+     *     con.executeQuery("invalid query");
+     * } catch (const zdb::sql_exception& e) {
+     *     std::cout << "SQL error: " << e.what() << std::endl;
+     * }
+     * @endcode
+     */
+    class sql_exception : public std::runtime_error {
     public:
-        sql_exception(const char* msg = "SQLException")
-        : std::runtime_error(msg)
-        {}
+        /**
+         * @brief Constructs a new sql_exception with an optional error message.
+         * @param msg A C-string representing the error message. Defaults to "SQLException".
+         */
+        explicit sql_exception(const char* msg = "SQLException") : std::runtime_error(msg) {}
     };
+
     
-#define except_wrapper(f) TRY { f; } ELSE {throw sql_exception(Exception_frame.message);} END_TRY
-    
-    struct noncopyable
-    {
-        noncopyable() = default;
-        
-        // make it noncopyable
-        noncopyable(noncopyable const&) = delete;
-        noncopyable& operator=(noncopyable const&) = delete;
-        
-        // make it not movable
-        noncopyable(noncopyable&&) = delete;
-        noncopyable& operator=(noncopyable&&) = delete;
-    };
-    
-    
-    class URL: private noncopyable
-    {
+    /**
+     * @class URL
+     * @brief Represents an immutable Uniform Resource Locator.
+     *
+     * Example: `http://user:password@www.foo.bar:8080/document/index.csp?querystring#ref`
+     * Supports IPv6 as defined in RFC2732.
+     */
+    class URL : private noncopyable {
     public:
-        URL(const std::string& url)
-        :URL(url.c_str())
-        {}
-        
-        URL(const char *url) {
-            t_ = URL_new(url);
+        /**
+         * @brief Create a new URL object from the URL parameter string.
+         * @param url A string specifying the URL.
+         * @throws sql_exception if the URL cannot be parsed.
+         */
+        explicit URL(const std::string& url) : t_(URL_new(url.c_str())) {
+            if (!t_) throw sql_exception("Invalid URL");
         }
         
-        ~URL() {
-            if (t_)
-                URL_free(&t_);
+        /**
+         * @brief Destroy the URL object.
+         */
+        ~URL() { if (t_) URL_free(&t_); }
+        
+        /**
+         * @brief Get the protocol of the URL.
+         * @return The protocol name.
+         */
+        [[nodiscard]] std::string_view protocol() const noexcept { return URL_getProtocol(t_); }
+        
+        /**
+         * @brief Get the user name from the authority part of the URL.
+         * @return An optional containing the username specified in the URL,
+         * or std::nullopt if not found.
+         */
+        [[nodiscard]] std::optional<std::string_view> user() const noexcept { return _to_optional(URL_getUser(t_)); }
+        
+        /**
+         * @brief Get the password from the authority part of the URL.
+         * @return An optional containing the password specified in the URL,
+         * or std::nullopt if not found.
+         */
+        [[nodiscard]] std::optional<std::string_view> password() const noexcept { return _to_optional(URL_getPassword(t_)); }
+        
+        /**
+         * @brief Get the hostname of the URL.
+         * @return An optional containing the hostname specified in the URL,
+         * or std::nullopt if not found.
+         */
+        [[nodiscard]] std::optional<std::string_view> host() const noexcept { return _to_optional(URL_getHost(t_)); }
+        
+        /**
+         * @brief Get the port of the URL.
+         * @return The port number of the URL or -1 if not specified.
+         */
+        [[nodiscard]] int port() const noexcept { return URL_getPort(t_); }
+        
+        /**
+         * @brief Get the path of the URL.
+         * @return An optional containing the path of the URL,
+         * or std::nullopt if not found.
+         */
+        [[nodiscard]] std::optional<std::string_view> path() const noexcept { return _to_optional(URL_getPath(t_)); }
+        
+        /**
+         * @brief Get the query string of the URL.
+         * @return An optional containing the query string of the URL,
+         * or std::nullopt if not found.
+         */
+        [[nodiscard]] std::optional<std::string_view> queryString() const noexcept { return _to_optional(URL_getQueryString(t_)); }
+        
+        /**
+         * @brief Returns a vector of string objects with the names of the
+         * parameters contained in this URL.
+         * @return A vector of strings, each string containing the name of
+         * a URL parameter; or an empty vector if the URL has no parameters.
+         */
+        [[nodiscard]] std::vector<std::string_view> parameterNames() const noexcept {
+            std::vector<std::string_view> names;
+            const char **rawNames = URL_getParameterNames(t_);
+            if (rawNames) {
+                for (int i = 0; rawNames[i] != nullptr; i++) {
+                    names.emplace_back(rawNames[i]);
+                }
+            }
+            return names;
         }
         
-        operator URL_T() {
-            return t_;
+        /**
+         * @brief Get the value of the specified URL parameter.
+         * @param name The parameter name to lookup.
+         * @return An optional containing the parameter value, or std::nullopt if not found.
+         */
+        [[nodiscard]] std::optional<std::string_view> parameter(const std::string& name) const {
+            return _to_optional(URL_getParameter(t_, name.c_str()));
         }
         
-    public:
-        const char *protocol() const {
-            return URL_getProtocol(t_);
-        }
+        /**
+         * @brief Returns a string representation of this URL object.
+         * @return The URL string.
+         */
+        [[nodiscard]] std::string_view toString() const noexcept { return URL_toString(t_); }
         
-        const char *user() const {
-            return URL_getUser(t_);
-        }
-        
-        const char *password() const {
-            return URL_getPassword(t_);
-        }
-        
-        const char *host() const {
-            return URL_getHost(t_);
-        }
-        
-        int port() const {
-            return URL_getPort(t_);
-        }
-        
-        const char *path() const {
-            return URL_getPath(t_);
-        }
-        
-        const char *queryString() const {
-            return URL_getQueryString(t_);
-        }
-        
-        const char **parameterNames() const {
-            return URL_getParameterNames(t_);
-        }
-        
-        const char *parameter(const char *name) const {
-            return URL_getParameter(t_, name);
-        }
-        
-        const char *tostring() const {
-            return URL_toString(t_);
-        }
+        /**
+         * @brief Cast operator to URL_T.
+         * @return The internal URL_T representation.
+         */
+        operator URL_T() const noexcept { return t_; }
         
     private:
         URL_T t_;
     };
-    
 
-    class ResultSet : private noncopyable
-    {
+    
+    /**
+     * @class ResultSet
+     * @brief Represents a database result set.
+     *
+     * Created by executing a SQL SELECT statement. Maintains a cursor pointing to its current row of data.
+     * Example:
+     * @code
+     * ResultSet result = con.executeQuery("SELECT ssn, name, picture FROM employees");
+     * while (result.next()) {
+     *     int ssn = result.getInt("ssn");
+     *     auto name = result.getString("name").value_or("null");
+     *     auto blob = result.getBlob("picture");
+     *     if (blob) {
+     *          // Use the blob...
+     *     } else {
+     *          // Handle the case where the blob is not found...
+     *     }
+     *     // ...
+     * }
+     * @endcode
+     */
+    class ResultSet : private noncopyable {
     public:
-        operator ResultSet_T() {
-            return t_;
+        /**
+         * @brief Move constructor.
+         * @param r ResultSet object to move.
+         */
+        ResultSet(ResultSet&& r) noexcept : t_(r.t_) { r.t_ = nullptr; }
+        
+        /**
+         * @brief Conversion operator to ResultSet_T.
+         * @return The underlying ResultSet_T.
+         */
+        operator ResultSet_T() noexcept { return t_; }
+        
+        /**
+         * @brief Returns the number of columns in this ResultSet object.
+         * @return The number of columns.
+         */
+        [[nodiscard]] int columnCount() const noexcept { return ResultSet_getColumnCount(t_); }
+        
+        /**
+         * @brief Get the designated column's name.
+         * @param columnIndex The first column is 1, the second is 2, ...
+         * @return An optional containing the Column name, or std::nullopt if the column does not exist.
+         */
+        [[nodiscard]] std::optional<std::string_view> columnName(int columnIndex) const noexcept {
+            return _to_optional(ResultSet_getColumnName(t_, columnIndex));
         }
         
-        ResultSet(ResultSet&& r)
-        :t_(r.t_)
-        {
-            r.t_ = nullptr;
+        /**
+         * @brief Returns column size in bytes.
+         * @param columnIndex The first column is 1, the second is 2, ...
+         * @return Column data size.
+         * @throws sql_exception If columnIndex is outside the valid range.
+         */
+        [[nodiscard]] long columnSize(int columnIndex) {
+            except_wrapper(RETURN ResultSet_getColumnSize(t_, columnIndex));
+        }
+        
+        /**
+         * @brief Specify the number of rows that should be fetched from the database when more rows are needed.
+         * @param prefetch_rows The number of rows to fetch (1..INT_MAX).
+         */
+        void setFetchSize(int rows) noexcept { ResultSet_setFetchSize(t_, rows); }
+        
+        /**
+         * @brief Get the number of rows that should be fetched from the database when more rows are needed.
+         * @return The number of rows to fetch or 0 if N/A.
+         */
+        [[nodiscard]] int getFetchSize() const noexcept { return ResultSet_getFetchSize(t_); }
+        
+        /**
+         * @brief Moves the cursor down one row from its current position.
+         * @return true if the new current row is valid; false if there are no more rows.
+         * @throws sql_exception If a database access error occurs.
+         */
+        bool next() { except_wrapper(RETURN ResultSet_next(t_)); }
+        
+        /**
+         * @brief Returns true if the value of the designated column in the current row is SQL NULL, otherwise false.
+         * @param columnIndex The first column is 1, the second is 2, ...
+         * @return True if column value is SQL NULL, otherwise false.
+         * @throws sql_exception If a database access error occurs or columnIndex is outside the valid range.
+         */
+        [[nodiscard]] bool isNull(int columnIndex) {
+            except_wrapper(RETURN ResultSet_isnull(t_, columnIndex));
+        }
+        
+        /**
+         * @brief Retrieves the value of the designated column as a string.
+         * @param columnIndex The first column is 1, the second is 2, ...
+         * @return An optional containing the column value, or std::nullopt if NULL.
+         * @throws sql_exception If a database access error occurs or columnIndex is outside the valid range.
+         */
+        [[nodiscard]] std::optional<std::string_view> getString(int columnIndex) {
+            except_wrapper(RETURN _to_optional(ResultSet_getString(t_, columnIndex)));
+        }
+        
+        /**
+         * @brief Retrieves the value of the designated column as a string.
+         * @param columnName The SQL name of the column. case-sensitive.
+         * @return An optional containing the column value, or std::nullopt if NULL.
+         * @throws sql_exception If a database access error occurs or columnName does not exist.
+         */
+        [[nodiscard]] std::optional<std::string_view> getString(const std::string& columnName) {
+            except_wrapper(RETURN _to_optional(ResultSet_getStringByName(t_, columnName.c_str())));
+        }
+        
+        /**
+         * @brief Retrieves the value of the designated column as an int.
+         * @param columnIndex The first column is 1, the second is 2, ...
+         * @return The column value; if the value is SQL NULL, the value returned is 0.
+         * @throws sql_exception If a database access error occurs, columnIndex is outside the valid range or if the value is NaN.
+         */
+        [[nodiscard]] int getInt(int columnIndex) {
+            except_wrapper(RETURN ResultSet_getInt(t_, columnIndex));
+        }
+        
+        /**
+         * @brief Retrieves the value of the designated column as an int.
+         * @param columnName The SQL name of the column. case-sensitive.
+         * @return The column value; if the value is SQL NULL, the value returned is 0.
+         * @throws sql_exception If a database access error occurs, columnName does not exist or if the value is NaN.
+         */
+        [[nodiscard]] int getInt(const std::string& columnName) {
+            except_wrapper(RETURN ResultSet_getIntByName(t_, columnName.c_str()));
+        }
+        
+        /**
+         * @brief Retrieves the value of the designated column as a long long.
+         * @param columnIndex The first column is 1, the second is 2, ...
+         * @return The column value; if the value is SQL NULL, the value returned is 0.
+         * @throws sql_exception If a database access error occurs, columnIndex is outside the valid range or if the value is NaN.
+         */
+        [[nodiscard]] long long getLLong(int columnIndex) {
+            except_wrapper(RETURN ResultSet_getLLong(t_, columnIndex));
+        }
+        
+        /**
+         * @brief Retrieves the value of the designated column as a long long.
+         * @param columnName The SQL name of the column. case-sensitive.
+         * @return The column value; if the value is SQL NULL, the value returned is 0.
+         * @throws sql_exception If a database access error occurs, columnName does not exist or if the value is NaN.
+         */
+        [[nodiscard]] long long getLLong(const std::string& columnName) {
+            except_wrapper(RETURN ResultSet_getLLongByName(t_, columnName.c_str()));
+        }
+        
+        /**
+         * @brief Retrieves the value of the designated column as a double.
+         * @param columnIndex The first column is 1, the second is 2, ...
+         * @return The column value; if the value is SQL NULL, the value returned is 0.0.
+         * @throws sql_exception If a database access error occurs, columnIndex is outside the valid range or if the value is NaN.
+         */
+        [[nodiscard]] double getDouble(int columnIndex) {
+            except_wrapper(RETURN ResultSet_getDouble(t_, columnIndex));
+        }
+        
+        /**
+         * @brief Retrieves the value of the designated column as a double.
+         * @param columnName The SQL name of the column. case-sensitive.
+         * @return The column value; if the value is SQL NULL, the value returned is 0.0.
+         * @throws sql_exception If a database access error occurs, columnName does not exist or if the value is NaN.
+         */
+        [[nodiscard]] double getDouble(const std::string& columnName) {
+            except_wrapper(RETURN ResultSet_getDoubleByName(t_, columnName.c_str()));
+        }
+        
+        /**
+         * @brief Retrieves the value of the designated column as a byte span.
+         * @param columnIndex The index of the column to retrieve (1-based).
+         * @return An optional span of bytes containing the blob data, or std::nullopt if the value is SQL NULL.
+         * @throws sql_exception If a database access error occurs or columnIndex is outside the valid range.
+         */
+        [[nodiscard]] std::optional<std::span<const std::byte>> getBlob(int columnIndex) {
+            int size = 0;
+            const void *blob = nullptr;
+            except_wrapper(blob = ResultSet_getBlob(t_, columnIndex, &size));
+            if (blob == nullptr || size == 0) {
+                return std::nullopt;
+            }
+            return std::span<const std::byte>(static_cast<const std::byte*>(blob), size);
+        }
+
+        /**
+         * @brief Retrieves the value of the designated column as a byte span.
+         * @param columnName The SQL name of the column. case-sensitive.
+         * @return An optional span of bytes containing the blob data, or std::nullopt if the value is SQL NULL.
+         * @throws sql_exception If a database access error occurs or columnIndex is outside the valid range.
+         */
+        [[nodiscard]] std::optional<std::span<const std::byte>> getBlob(const std::string& columnName) {
+            int size = 0;
+            const void *blob = nullptr;
+            except_wrapper(blob = ResultSet_getBlobByName(t_, columnName.c_str(), &size));
+            if (blob == nullptr || size == 0) {
+                return std::nullopt;
+            }
+            return std::span<const std::byte>(static_cast<const std::byte*>(blob), size);
+        }
+
+        /**
+         * @brief Retrieves the value of the designated column as a Unix timestamp.
+         * @param columnIndex The first column is 1, the second is 2, ...
+         * @return The column value as seconds since the epoch in the GMT timezone.
+         *         If the value is SQL NULL, the value returned is 0.
+         * @throws sql_exception If a database access error occurs, columnIndex is outside
+         *         the valid range or if the column value cannot be converted to a valid timestamp.
+         */
+        [[nodiscard]] time_t getTimestamp(int columnIndex) {
+            except_wrapper(RETURN ResultSet_getTimestamp(t_, columnIndex));
+        }
+        
+        /**
+         * @brief Retrieves the value of the designated column as a Unix timestamp.
+         * @param columnName The SQL name of the column. case-sensitive.
+         * @return The column value as seconds since the epoch in the GMT timezone.
+         *         If the value is SQL NULL, the value returned is 0.
+         * @throws sql_exception If a database access error occurs, columnName is not found
+         *         or if the column value cannot be converted to a valid timestamp.
+         */
+        [[nodiscard]] time_t getTimestamp(const std::string& columnName) {
+            except_wrapper(RETURN ResultSet_getTimestampByName(t_, columnName.c_str()));
+        }
+        
+        /**
+         * @brief Retrieves the value of the designated column as a Date, Time or DateTime.
+         * @param columnIndex The first column is 1, the second is 2, ...
+         * @return A tm structure with fields for date and time.
+         *         If the value is SQL NULL, a zeroed tm structure is returned. Use isNull() if in doubt.
+         * @throws sql_exception If a database access error occurs, columnIndex is outside the valid range
+         *         or if the column value cannot be converted to a valid SQL Date, Time or DateTime type.
+         */
+        [[nodiscard]] tm getDateTime(int columnIndex) {
+            except_wrapper(RETURN ResultSet_getDateTime(t_, columnIndex));
+        }
+        
+        /**
+         * @brief Retrieves the value of the designated column as a Date, Time or DateTime.
+         * @param columnName The SQL name of the column. case-sensitive.
+         * @return A tm structure with fields for date and time.
+         *         If the value is SQL NULL, a zeroed tm structure is returned. Use isNull() if in doubt.
+         * @throws sql_exception If a database access error occurs, columnName is not found
+         *         or if the column value cannot be converted to a valid SQL Date, Time or DateTime type.
+         */
+        [[nodiscard]] tm getDateTime(const std::string& columnName) {
+            except_wrapper(RETURN ResultSet_getDateTimeByName(t_, columnName.c_str()));
         }
         
     protected:
         friend class PreparedStatement;
         friend class Connection;
         
-        ResultSet(ResultSet_T t)
-        :t_(t)
-        {}
+        /**
+         * @brief Constructs a ResultSet from a ResultSet_T.
+         * @param t The underlying ResultSet_T.
+         */
+        explicit ResultSet(ResultSet_T t) : t_(t) {}
         
-    public:
-        int columnCount() {
-            return ResultSet_getColumnCount(t_);
-        }
-        
-        const char *columnName(int columnIndex) {
-            except_wrapper( RETURN ResultSet_getColumnName(t_, columnIndex) );
-        }
-        
-        long columnSize(int columnIndex) {
-            except_wrapper( RETURN ResultSet_getColumnSize(t_, columnIndex) );
-        }
-
-        void setFetchSize(int prefetch_rows) {
-            ResultSet_setFetchSize(t_, prefetch_rows);
-        }
-
-        int getFetchSize() {
-            return ResultSet_getFetchSize(t_);
-        }
-
-        bool next() {
-            except_wrapper( RETURN ResultSet_next(t_) );
-        }
-        
-        bool isnull(int columnIndex) {
-            except_wrapper( RETURN ResultSet_isnull(t_, columnIndex) );
-        }
-        
-        const char *getString(int columnIndex) {
-            except_wrapper( RETURN ResultSet_getString(t_, columnIndex) );
-        }
-        
-        const char *getString(const char *columnName) {
-            except_wrapper( RETURN ResultSet_getStringByName(t_, columnName) );
-        }
-        
-        int getInt(int columnIndex) {
-            except_wrapper( RETURN ResultSet_getInt(t_, columnIndex) );
-        }
-        
-        int getInt(const char *columnName) {
-            except_wrapper( RETURN ResultSet_getIntByName(t_, columnName) );
-        }
-        
-        long long getLLong(int columnIndex) {
-            except_wrapper( RETURN ResultSet_getLLong(t_, columnIndex) );
-        }
-        
-        long long getLLong(const char *columnName) {
-            except_wrapper( RETURN ResultSet_getLLongByName(t_, columnName) );
-        }
-        
-        double getDouble(int columnIndex) {
-            except_wrapper( RETURN ResultSet_getDouble(t_, columnIndex) );
-        }
-        
-        double getDouble(const char *columnName) {
-            except_wrapper( RETURN ResultSet_getDoubleByName(t_, columnName) );
-        }
-        
-        template <typename T>
-        std::tuple<const void*, int> getBlob(T v) {
-            static_assert(std::is_same_v<T, int> || std::is_same_v<T, const char*>,
-                          "T must be either int or const char*");
-            int size = 0;
-            const void *blob = nullptr;
-            if constexpr (std::is_same_v<T, int>)
-                except_wrapper( blob = ResultSet_getBlob(t_, v, &size) );
-            else
-                except_wrapper( blob = ResultSet_getBlobByName(t_, v, &size) );
-            return {blob, size};
-        }
-        
-        time_t getTimestamp(int columnIndex) {
-            except_wrapper( RETURN ResultSet_getTimestamp(t_, columnIndex) );
-        }
-        
-        time_t getTimestamp(const char *columnName) {
-            except_wrapper( RETURN ResultSet_getTimestampByName(t_, columnName) );
-        }
-        
-        struct tm getDateTime(int columnIndex) {
-            except_wrapper( RETURN ResultSet_getDateTime(t_, columnIndex) );
-        }
-        
-        struct tm getDateTime(const char *columnName) {
-            except_wrapper( RETURN ResultSet_getDateTimeByName(t_, columnName) );
-        }
-
     private:
         ResultSet_T t_;
     };
-    
 
-    class PreparedStatement : private noncopyable
-    {
+    
+    /**
+     * @class PreparedStatement
+     * @brief Represents a single SQL statement pre-compiled into byte code.
+     *
+     * A PreparedStatement can contain SQL parameters, which are set using the
+     * various set methods. A PreparedStatement is created by calling
+     * Connection::prepareStatement().
+     *
+     * Example usage:
+     * @code
+     * PreparedStatement stmt = con.prepareStatement("INSERT INTO employee(name, picture) VALUES(?, ?)");
+     * stmt.setString(1, "Kamiya Kaoru");
+     * stmt.setBlob(2, jpeg);
+     * stmt.execute();
+     * @endcode
+     */
+    class PreparedStatement : private noncopyable {
     public:
-        operator PreparedStatement_T() {
-            return t_;
+        /**
+         * @brief Move constructor.
+         * @param r PreparedStatement object to move.
+         */
+        PreparedStatement(PreparedStatement&& r) noexcept : t_(r.t_) { r.t_ = nullptr; }
+        
+        /**
+         * @brief Conversion operator to PreparedStatement_T.
+         * @return The underlying PreparedStatement_T.
+         */
+        operator PreparedStatement_T() const noexcept { return t_; }
+        
+        /**
+         * @brief Sets the string parameter at the given index.
+         * @param parameterIndex The index of the parameter to set (1-based).
+         * @param x The string value to set.
+         * @note The string data must remain valid until execute() or executeQuery()
+         *       is called. This method does not copy the string data.
+         */
+        void setString(int parameterIndex, std::string_view x) {
+            storage_[parameterIndex] = x;
+            except_wrapper(PreparedStatement_setString(t_, parameterIndex, x.data()));
         }
         
-        PreparedStatement(PreparedStatement&& r)
-        :t_(r.t_)
-        {
-            r.t_ = nullptr;
+        /**
+         * @brief Sets the string parameter at the given index.
+         * @param parameterIndex The index of the parameter to set (1-based).
+         * @param x The string value to set.
+         * @note The string data must remain valid until execute() or executeQuery()
+         *       is called. This method does not copy the string data.
+         */
+        void setString(int parameterIndex, const std::string& x) {
+            setString(parameterIndex, std::string_view(x));
         }
         
-    protected:
-        friend class Connection;
-        
-        PreparedStatement(PreparedStatement_T t)
-        :t_(t)
-        {}
-        
-    public:
-        void setString(int parameterIndex, const char *x) {
-            except_wrapper( PreparedStatement_setString(t_, parameterIndex, x) );
-        }
-        
+       /**
+         * @brief Sets the integer parameter at the given index.
+         * @param parameterIndex The index of the parameter to set (1-based).
+         * @param x The integer value to set.
+         */
         void setInt(int parameterIndex, int x) {
-            except_wrapper( PreparedStatement_setInt(t_, parameterIndex, x) );
+            except_wrapper(PreparedStatement_setInt(t_, parameterIndex, x));
         }
         
+        /**
+         * @brief Sets the long long parameter at the given index.
+         * @param parameterIndex The index of the parameter to set (1-based).
+         * @param x The long long value to set.
+         */
         void setLLong(int parameterIndex, long long x) {
-            except_wrapper( PreparedStatement_setLLong(t_, parameterIndex, x) );
+            except_wrapper(PreparedStatement_setLLong(t_, parameterIndex, x));
         }
         
+        /**
+         * @brief Sets the double parameter at the given index.
+         * @param parameterIndex The index of the parameter to set (1-based).
+         * @param x The double value to set.
+         */
         void setDouble(int parameterIndex, double x) {
-            except_wrapper( PreparedStatement_setDouble(t_, parameterIndex, x) );
+            except_wrapper(PreparedStatement_setDouble(t_, parameterIndex, x));
         }
         
-        void setBlob(int parameterIndex, const void *x, int size) {
-            except_wrapper( PreparedStatement_setBlob(t_, parameterIndex, x, size) );
+        /**
+         * @brief Sets the blob parameter at the given index.
+         * @param parameterIndex The index of the parameter to set (1-based).
+         * @param x The blob value to set.
+         * @note The blob data must remain valid until execute() or executeQuery()
+         *       is called. This method does not copy the blob data.
+         */
+        void setBlob(int parameterIndex, std::span<const std::byte> x) {
+            if (x.empty()) {
+                setNull(parameterIndex);
+            } else {
+                storage_[parameterIndex] = x;
+                except_wrapper(PreparedStatement_setBlob(t_, parameterIndex, x.data(), static_cast<int>(x.size())));
+            }
         }
         
+        /**
+         * @brief Sets the timestamp parameter at the given index.
+         * @param parameterIndex The index of the parameter to set (1-based).
+         * @param x The timestamp value to set.
+         */
         void setTimestamp(int parameterIndex, time_t x) {
-            except_wrapper( PreparedStatement_setTimestamp(t_, parameterIndex, x) );
+            except_wrapper(PreparedStatement_setTimestamp(t_, parameterIndex, x));
         }
         
+        /**
+         * @brief Sets the parameter at the given index to SQL NULL.
+         * @param parameterIndex The index of the parameter to set (1-based).
+         */
+        void setNull(int parameterIndex) {
+            except_wrapper(PreparedStatement_setNull(t_, parameterIndex));
+        }
+        
+        /**
+         * @brief Executes the prepared SQL statement.
+         */
         void execute() {
-            except_wrapper( PreparedStatement_execute(t_) );
+            except_wrapper(PreparedStatement_execute(t_));
+            storage_.clear();
         }
         
-        ResultSet executeQuery() {
+        /**
+         * @brief Executes the prepared SQL query.
+         * @return A ResultSet containing the query results.
+         */
+        [[nodiscard]] ResultSet executeQuery() {
             except_wrapper(
                            ResultSet_T r = PreparedStatement_executeQuery(t_);
+                           storage_.clear();
                            RETURN ResultSet(r);
                            );
         }
         
-        long long rowsChanged() {
+        /**
+         * @brief Gets the number of rows changed by the last statement.
+         * @return The number of rows changed.
+         */
+        [[nodiscard]] long long rowsChanged() noexcept {
             return PreparedStatement_rowsChanged(t_);
         }
         
-        int getParameterCount() {
+        /**
+         * @brief Gets the number of parameters in the prepared statement.
+         * @return The number of parameters.
+         */
+        [[nodiscard]] int getParameterCount() noexcept {
             return PreparedStatement_getParameterCount(t_);
         }
         
     public:
-        void bind(int parameterIndex, const char *x) {
-            this->setString(parameterIndex, x);
-        }
-        
+        /**
+         * @brief Binds a string value to the prepared statement.
+         * @param parameterIndex The index of the parameter to bind (1-based).
+         * @param x The string value to bind.
+         * @note The string data must remain valid until execute() or executeQuery()
+         *       is called. This method does not copy the string data.
+         */
         void bind(int parameterIndex, const std::string& x) {
-            this->setString(parameterIndex, x.c_str());
+            setString(parameterIndex, x);
         }
         
-        void bind(int parameterIndex, int x) {
-            this->setInt(parameterIndex, x);
+        /**
+         * @brief Binds a string value to the prepared statement.
+         * @param parameterIndex The index of the parameter to bind (1-based).
+         * @param x The string value to bind.
+         * @note The string data must remain valid until execute() or executeQuery()
+         *       is called. This method does not copy the string data.
+         */
+        void bind(int parameterIndex, std::string_view x) {
+            setString(parameterIndex, x);
         }
         
-        void bind(int parameterIndex, long long x) {
-            this->setLLong(parameterIndex, x);
-        }
-        
-        void bind(int parameterIndex, double x) {
-            this->setDouble(parameterIndex, x);
-        }
-        
-        // Template for time_t. SFINAE prevents instantiation for non-time_t types,
-        // avoiding overload ambiguity. On (32-bits) systems where time_t is long long
-        // you might want to use static_cast<time_t>(t) to guarantee this overload.
-        template<typename T>
-        std::enable_if_t<std::is_same_v<T, time_t>, void>
-        bind(int parameterIndex, T x) {
-            this->setTimestamp(parameterIndex, x);
-        }
-
-        // blob
-        void bind(int parameterIndex, std::tuple<const void *, int> x) {
-            auto [blob, size] = x;
-            this->setBlob(parameterIndex, blob, size);
-        }
-        
-    private:
-        PreparedStatement_T t_;
-    };
-    
-
-    class Connection : private noncopyable
-    {
-    public:
-        operator Connection_T() {
-            return t_;
-        }
-        
-        ~Connection() {
-            if (t_) {
-                close();
+        /**
+         * @brief Binds a string value to the prepared statement.
+         * @param parameterIndex The index of the parameter to bind (1-based).
+         * @param x The string value to bind.
+         * @note The string data must remain valid until execute() or executeQuery()
+         *       is called. This method does not copy the string data.
+         */
+        void bind(int parameterIndex, const char* x) {
+            if (x == nullptr) {
+                setNull(parameterIndex);
+            } else {
+                setString(parameterIndex, static_cast<std::string_view>(x));
             }
         }
         
-    protected:  // for ConnectionPool
-        friend class ConnectionPool;
-        
-        Connection(Connection_T C)
-        :t_(C)
-        {}
-        
-        void setClosed() {
-            t_ = nullptr;
+        /**
+         * @brief Binds an arithmetic type (int, double, etc.) and time_t to the prepared statement.
+         * @param parameterIndex The index of the parameter to bind (1-based).
+         * @param x The value to bind.
+         */
+        template<typename T>
+        typename std::enable_if_t<
+        std::is_arithmetic_v<T> || std::is_same_v<T, time_t>,
+        void
+        > bind(int parameterIndex, T x) {
+            if constexpr (std::is_same_v<T, time_t>) {
+                setTimestamp(parameterIndex, x);
+            } else if constexpr (std::is_integral_v<T>) {
+                if constexpr (sizeof(T) <= sizeof(int)) {
+                    setInt(parameterIndex, static_cast<int>(x));
+                } else {
+                    setLLong(parameterIndex, static_cast<long long>(x));
+                }
+            } else if constexpr (std::is_floating_point_v<T>) {
+                setDouble(parameterIndex, static_cast<double>(x));
+            }
         }
         
+        /**
+         * @brief Binds the parameter at the given index to SQL NULL.
+         * @param parameterIndex The index of the parameter to set (1-based).
+         */
+        void bind(int parameterIndex, std::nullptr_t) {
+            setNull(parameterIndex);
+        }
+        
+        /**
+         * @brief Binds blob data to the prepared statement.
+         * @param parameterIndex The index of the parameter to bind (1-based).
+         * @param x The blob value to set.
+         * @note The blob data must remain valid until execute() or executeQuery()
+         *       is called. This method does not copy the blob data.
+         */
+        void bind(int parameterIndex, std::span<const std::byte> x) {
+            setBlob(parameterIndex, x);
+        }
+
+    protected:
+        friend class Connection;
+        
+        /**
+         * @brief Constructs a PreparedStatement from a PreparedStatement_T.
+         * @param t The underlying PreparedStatement_T.
+         */
+        explicit PreparedStatement(PreparedStatement_T t) : t_(t) {}
+        
+    private:
+        PreparedStatement_T t_;
+        // A store to ensure that we have valid references to the data
+        std::unordered_map<int, std::variant<std::string_view, std::span<const std::byte>>> storage_;
+    };
+
+    
+    /**
+     * @class Connection
+     * @brief A `Connection represent a connection to a SQL database system.
+     *
+     * The Connection class is used to execute SQL statements, manage transactions,
+     * and retrieve results. It supports executing statements directly or using
+     * prepared statements.
+     *
+     * A Connection instance should only be used by one thread at a time.
+     */
+    class Connection : private noncopyable {
     public:
-        void setQueryTimeout(int ms) {
-            Connection_setQueryTimeout(t_, ms);
-        }
+        /**
+         * @brief Destructor, closes the connection if it is open.
+         */
+        ~Connection() { if (t_) close(); }
         
-        int getQueryTimeout() {
-            return Connection_getQueryTimeout(t_);
-        }
+        /**
+         * @brief Implicit conversion to the underlying Connection_T type.
+         * @return The underlying Connection_T object.
+         */
+        operator Connection_T() const noexcept { return t_; }
         
-        void setMaxRows(int max) {
-            Connection_setMaxRows(t_, max);
-        }
+        /**
+         * @brief Sets the query timeout.
+         * @param ms Timeout in milliseconds.
+         */
+        void setQueryTimeout(int ms) noexcept { Connection_setQueryTimeout(t_, ms); }
         
-        int getMaxRows() {
-            return Connection_getMaxRows(t_);
-        }
+        /**
+         * @brief Gets the current query timeout.
+         * @return The query timeout in milliseconds.
+         */
+        [[nodiscard]] int getQueryTimeout() noexcept { return Connection_getQueryTimeout(t_); }
         
-        void setFetchSize(int rows) {
-            Connection_setFetchSize(t_, rows);
-        }
+        /**
+         * @brief Sets the maximum number of rows a ResultSet can contain.
+         * @param max Maximum number of rows.
+         */
+        void setMaxRows(int max) noexcept { Connection_setMaxRows(t_, max); }
         
-        int getFetchSize() {
-            return Connection_getFetchSize(t_);
-        }
+        /**
+         * @brief Gets the maximum number of rows a ResultSet can contain.
+         * @return The maximum number of rows.
+         */
+        [[nodiscard]] int getMaxRows() noexcept { return Connection_getMaxRows(t_); }
         
-        //not supported
-        //URL_T Connection_getURL(T C);
+        /**
+         * @brief Sets the number of rows to fetch when more rows are needed.
+         * @param rows Number of rows to fetch.
+         */
+        void setFetchSize(int rows) noexcept { Connection_setFetchSize(t_, rows); }
         
-        bool ping() {
-            return Connection_ping(t_);
-        }
+        /**
+         * @brief Gets the number of rows to fetch when more rows are needed.
+         * @return The number of rows to fetch.
+         */
+        [[nodiscard]] int getFetchSize() noexcept { return Connection_getFetchSize(t_); }
         
-        void clear() {
-            Connection_clear(t_);
-        }
+        /**
+         * @brief Pings the database server to check if the connection is alive.
+         * @return True if the connection is alive, false otherwise.
+         */
+        [[nodiscard]] bool ping() noexcept { return Connection_ping(t_); }
         
-        //after close(), t_ is set to NULL. so this Connection object can not be used again!
-        void close() {
+        /**
+         * @brief Clears any pending results or statements.
+         */
+        void clear() noexcept { Connection_clear(t_); }
+        
+        /**
+         * @brief Closes the connection.
+         */
+        void close() noexcept {
             if (t_) {
                 Connection_close(t_);
                 setClosed();
             }
         }
         
-        void beginTransaction() {
-            except_wrapper( Connection_beginTransaction(t_) );
-        }
+        /**
+         * @brief Begins a new transaction.
+         * @throws SQLException If a database error occurs.
+         */
+        void beginTransaction() { except_wrapper(Connection_beginTransaction(t_)); }
         
-        void commit() {
-            except_wrapper( Connection_commit(t_) );
-        }
+        /**
+         * @brief Commits the current transaction.
+         * @throws SQLException If a database error occurs.
+         */
+        void commit() { except_wrapper(Connection_commit(t_)); }
         
-        void rollback() {
-            except_wrapper( Connection_rollback(t_) );
-        }
+        /**
+         * @brief Rolls back the current transaction.
+         * @throws SQLException If a database error occurs.
+         */
+        void rollback() { except_wrapper(Connection_rollback(t_)); }
         
-        long long lastRowId() {
-            return Connection_lastRowId(t_);
-        }
+        /**
+         * @brief Gets the last inserted row ID.
+         * @return The last inserted row ID.
+         */
+        [[nodiscard]] long long lastRowId() noexcept { return Connection_lastRowId(t_); }
         
-        long long rowsChanged() {
-            return Connection_rowsChanged(t_);
-        }
+        /**
+         * @brief Gets the number of rows changed by the last operation.
+         * @return The number of rows changed.
+         */
+        [[nodiscard]] long long rowsChanged() noexcept { return Connection_rowsChanged(t_); }
         
-        void execute(const char *sql) {
-            except_wrapper( Connection_execute(t_, "%s", sql) );
-        }
+        /**
+         * @brief Executes a SQL statement.
+         * @param sql The SQL statement to execute.
+         * @throws SQLException If a database error occurs.
+         */
+        void execute(const std::string& sql) { except_wrapper(Connection_execute(t_, "%s", sql.c_str())); }
         
+        /**
+         * @brief Executes a parameterized SQL statement.
+         * @param sql The SQL statement with placeholders.
+         * @param args The arguments to bind to the placeholders.
+         * @throws SQLException If a database error occurs.
+         */
         template <typename ...Args>
-        void execute(const char *sql, Args ... args) {
-            PreparedStatement p(this->prepareStatement(sql, args...));
+        void execute(const std::string& sql, Args&&... args) {
+            PreparedStatement p(this->prepareStatement(sql));
+            int i = 1;
+            (p.bind(i++, std::forward<Args>(args)), ...);
             p.execute();
         }
         
-        ResultSet executeQuery(const char *sql) {
+        /**
+         * @brief Executes a SQL query and returns a ResultSet.
+         * @param sql The SQL query to execute.
+         * @return A ResultSet containing the query results.
+         * @throws SQLException If a database error occurs.
+         */
+        [[nodiscard]] ResultSet executeQuery(const std::string& sql) {
             except_wrapper(
-                           ResultSet_T r = Connection_executeQuery(t_, "%s", sql);
+                           ResultSet_T r = Connection_executeQuery(t_, "%s", sql.c_str());
                            RETURN ResultSet(r);
                            );
         }
         
+        /**
+         * @brief Executes a parameterized SQL query and returns a ResultSet.
+         * @param sql The SQL query with placeholders.
+         * @param args The arguments to bind to the placeholders.
+         * @return A ResultSet containing the query results.
+         * @throws SQLException If a database error occurs.
+         */
         template <typename ...Args>
-        ResultSet executeQuery(const char *sql, Args ... args) {
-            PreparedStatement p(this->prepareStatement(sql, args...));
+        [[nodiscard]] ResultSet executeQuery(const std::string& sql, Args&&... args) {
+            PreparedStatement p(this->prepareStatement(sql));
+            int i = 1;
+            (p.bind(i++, std::forward<Args>(args)), ...);
             return p.executeQuery();
         }
         
-        PreparedStatement prepareStatement(const char *sql) {
+        /**
+         * @brief Prepares a SQL statement for execution.
+         * @param sql The SQL statement to prepare.
+         * @return A PreparedStatement object.
+         * @throws SQLException If a database error occurs.
+         */
+        [[nodiscard]] PreparedStatement prepareStatement(const std::string& sql) {
             except_wrapper(
-                           PreparedStatement_T p = Connection_prepareStatement(t_, "%s", sql);
+                           PreparedStatement_T p = Connection_prepareStatement(t_, "%s", sql.c_str());
                            RETURN PreparedStatement(p);
                            );
         }
         
+        /**
+         * @brief Prepares a parameterized SQL statement for execution.
+         * @param sql The SQL statement with placeholders.
+         * @param args The arguments to bind to the placeholders.
+         * @return A PreparedStatement object.
+         * @throws SQLException If a database error occurs.
+         */
         template <typename ...Args>
-        PreparedStatement prepareStatement(const char *sql, Args ... args) {
+        [[nodiscard]] PreparedStatement prepareStatement(const std::string& sql, Args&&... args) {
             except_wrapper(
                            PreparedStatement p(this->prepareStatement(sql));
                            int i = 1;
-                           (p.bind(i++, args), ...);
+                           (p.bind(i++, std::forward<Args>(args)), ...);
                            RETURN p;
                            );
         }
         
-        const char *getLastError() {
+        /**
+         * @brief Gets the last error message.
+         * @return The last error message as a string view.
+         */
+        [[nodiscard]] const std::string_view getLastError() const noexcept {
             return Connection_getLastError(t_);
         }
         
-        static bool isSupported(const char *url) {
-            return Connection_isSupported(url);
+        /**
+         * @brief Checks if the specified database system is supported.
+         * @param url The database URL or protocol.
+         * @return True if supported, false otherwise.
+         */
+        [[nodiscard]] static bool isSupported(const std::string& url) noexcept {
+            return Connection_isSupported(url.c_str());
         }
+        
+    protected:
+        friend class ConnectionPool;
+        
+        /**
+         * @brief Constructs a Connection with an existing Connection_T object.
+         * @param C The existing Connection_T object.
+         */
+        explicit Connection(Connection_T C) : t_(C) {}
+        
+        /**
+         * @brief Marks the connection as closed.
+         */
+        void setClosed() noexcept { t_ = nullptr; }
         
     private:
         Connection_T t_;
     };
+
     
-    
-    class ConnectionPool : private noncopyable
-    {
+    /**
+     * @class ConnectionPool
+     * @brief A `ConnectionPool` represent a database connection pool
+     *
+     * The ConnectionPool class handles creating, managing, and providing
+     * connections to a database. It supports setting various properties
+     * like initial and maximum connections, connection timeouts, and more.
+     * It also includes methods for starting and stopping the pool, as well
+     * as obtaining and returning connections.
+     *
+     * This ConnectionPool is thread-safe.
+     */
+    class ConnectionPool : private noncopyable {
     public:
-        ConnectionPool(const std::string& url)
-        :ConnectionPool(url.c_str())
-        {}
-        
-        ConnectionPool(const char* url)
-        :url_(url)
-        {
+        using AbortHandler = std::function<void(std::string_view)>;
+
+        /**
+         * @brief Constructs a ConnectionPool with the given URL.
+         * @param url The database connection URL.
+         * @throws sql_exception If the URL is invalid.
+         */
+        explicit ConnectionPool(const std::string& url) : url_(url) {
             if (!url_)
                 throw sql_exception("Invalid URL");
             t_ = ConnectionPool_new(url_);
         }
         
-        ~ConnectionPool() {
-            ConnectionPool_free(&t_);
-        }
+        /**
+         * @brief Destructor, releases resources allocated by the pool.
+         */
+        ~ConnectionPool() { ConnectionPool_free(&t_); }
         
-        operator ConnectionPool_T() {
-            return t_;
-        }
+        /**
+         * @brief Implicit conversion to the underlying ConnectionPool_T type.
+         * @return The underlying ConnectionPool_T object.
+         */
+        operator ConnectionPool_T() noexcept { return t_; }
         
-    public:
-        const URL& getURL() {
-            return url_;
-        }
+        /**
+         * @brief Gets the URL of the connection pool.
+         * @return The URL of the connection pool.
+         */
+        [[nodiscard]] const URL& getURL() const noexcept { return url_; }
         
-        void setInitialConnections(int connections) {
+        /**
+         * @brief Sets the number of initial connections in the pool.
+         * @param connections The number of initial connections.
+         */
+        void setInitialConnections(int connections) noexcept {
             ConnectionPool_setInitialConnections(t_, connections);
         }
         
-        int getInitialConnections() {
+        /**
+         * @brief Gets the number of initial connections in the pool.
+         * @return The number of initial connections.
+         */
+        [[nodiscard]] int getInitialConnections() noexcept {
             return ConnectionPool_getInitialConnections(t_);
         }
         
-        void setMaxConnections(int maxConnections) {
+        /**
+         * @brief Sets the maximum number of connections in the pool.
+         * @param maxConnections The maximum number of connections.
+         */
+        void setMaxConnections(int maxConnections) noexcept {
             ConnectionPool_setMaxConnections(t_, maxConnections);
         }
         
-        int getMaxConnections() {
+        /**
+         * @brief Gets the maximum number of connections in the pool.
+         * @return The maximum number of connections.
+         */
+        [[nodiscard]] int getMaxConnections() noexcept {
             return ConnectionPool_getMaxConnections(t_);
         }
         
-        void setConnectionTimeout(int connectionTimeout) {
+        /**
+         * @brief Sets the connection timeout value.
+         * @param connectionTimeout The timeout value in seconds.
+         */
+        void setConnectionTimeout(int connectionTimeout) noexcept {
             ConnectionPool_setConnectionTimeout(t_, connectionTimeout);
         }
         
-        int getConnectionTimeout() {
+        /**
+         * @brief Gets the connection timeout value.
+         * @return The connection timeout value in seconds.
+         */
+        [[nodiscard]] int getConnectionTimeout() noexcept {
             return ConnectionPool_getConnectionTimeout(t_);
         }
         
-        void setAbortHandler(void(*abortHandler)(const char *error)) {
-            ConnectionPool_setAbortHandler(t_, abortHandler);
+        /**
+         * @brief Set the function to call if a fatal error occurs in the library
+         * In practice this means Out-Of-Memory errors or uncatched exceptions.
+         * Clients may optionally provide this function. If not provided
+         * the library will call `abort(3)` or `exit(1)` upon encountering a fatal error
+         * It is an unchecked runtime error to continue using the library after
+         * the `abortHandler` was called.
+         * @param abortHandler The handler function to call on fatal errors.
+         */
+        void setAbortHandler(AbortHandler abortHandler = nullptr) noexcept {
+            g_abortHandler = std::move(abortHandler);
+            ConnectionPool_setAbortHandler(t_, g_abortHandler ? bridgeAbortHandler : nullptr);
         }
-        
-        void setReaper(int sweepInterval) {
+
+        /**
+         * @brief Sets the reaper thread sweep interval.
+         * @param sweepInterval The sweep interval in seconds.
+         */
+        void setReaper(int sweepInterval) noexcept {
             ConnectionPool_setReaper(t_, sweepInterval);
         }
         
-        int size() {
-            return ConnectionPool_size(t_);
-        }
+        /**
+         * @brief Gets the current number of connections in the pool.
+         * @return The total number of connections in the pool.
+         */
+        [[nodiscard]] int size() noexcept { return ConnectionPool_size(t_); }
         
-        int active() {
-            return ConnectionPool_active(t_);
-        }
+        /**
+         * @brief Gets the number of active connections in the pool.
+         * @return The number of active connections in the pool.
+         */
+        [[nodiscard]] int active() noexcept { return ConnectionPool_active(t_); }
         
-        void start() {
-            except_wrapper( ConnectionPool_start(t_) );
-        }
+        /**
+         * @brief Starts the connection pool.
+         * @throws SQLException If a database error occurs.
+         */
+        void start() { except_wrapper(ConnectionPool_start(t_)); }
         
+        /**
+         * @brief Stops the connection pool.
+         * @throws sql_exception If there are active connections.
+         */
         void stop() {
             if (this->active() > 0) {
-                throw sql_exception("Trying to stop the pool with active Connections. Please close all active Connections first");
+                throw sql_exception(
+                                    "Trying to stop the pool with active Connections. "
+                                    "Please close all active Connections first");
             }
             ConnectionPool_stop(t_);
         }
         
-        Connection getConnection() {
+        /**
+         * @brief Obtains a connection from the pool.
+         * @return A Connection object.
+         * @throws SQLException If a database error occurs.
+         */
+        [[nodiscard]] Connection getConnection() {
             except_wrapper(
                            Connection_T c = ConnectionPool_getConnectionOrException(t_);
                            RETURN Connection(c);
                            );
         }
         
-        void returnConnection(Connection& con) {
-            con.close();
-        }
+        /**
+         * @brief Returns a connection to the pool.
+         * @param con The Connection to return.
+         */
+        void returnConnection(Connection& con) noexcept { con.close(); }
         
-        int reapConnections() {
+        /**
+         * @brief Reaps inactive connections in the pool.
+         * @return The number of connections reaped.
+         */
+        [[nodiscard]] int reapConnections() noexcept {
             return ConnectionPool_reapConnections(t_);
         }
         
-        static const char *version(void) {
+        /**
+         * @brief Gets the library version information.
+         * @return The version information as a string view.
+         */
+        [[nodiscard]] static std::string_view version() noexcept {
             return ConnectionPool_version();
         }
         
@@ -671,8 +1242,7 @@ namespace zdb {
         URL url_;
         ConnectionPool_T t_;
     };
-    
-    
-} // namespace
+
+} // namespace zdb
 
 #endif
