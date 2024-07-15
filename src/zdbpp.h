@@ -158,14 +158,14 @@ try {
 - `ConnectionPool`: Manages a pool of database connections
 
 For detailed API documentation, refer to the comments for each class in this header file.
-Visit [libzd's homepage](https://www.tildeslash.com/libzdb/) for more documentation and examples.
+Visit [libzd's homepage](https://www.tildeslash.com/libzdb/) for documentation and examples.
 */
 
 namespace zdb {
     namespace {
         #define except_wrapper(f) TRY { f; } ELSE { throw sql_exception(Exception_frame.message); } END_TRY
         
-        std::optional<std::string_view> _to_optional(const char* str) {
+        constexpr std::optional<std::string_view> _to_optional(const char* str) noexcept {
             return str ? std::optional<std::string_view>{str} : std::nullopt;
         }
         
@@ -232,27 +232,27 @@ namespace zdb {
         
         /**
          * @brief Copy constructor.
-         * @param other URL object to copy.
+         * @param r URL object to copy.
          */
-        URL(const URL& other) : t_(URL_new(URL_toString(other.t_))) {
+        URL(const URL& r) : t_(URL_new(URL_toString(r.t_))) {
             if (!t_) throw sql_exception("Failed to copy URL");
         }
         
         /**
          * @brief Move constructor.
-         * @param other URL object to move.
+         * @param r URL object to move.
          */
-        URL(URL&& other) noexcept : t_(other.t_) {
-            other.t_ = nullptr;
+        URL(URL&& r) noexcept : t_(r.t_) {
+            r.t_ = nullptr;
         }
         
         /**
          * @brief Copy assignment operator.
-         * @param other URL object to copy assign.
+         * @param r URL object to copy assign.
          */
-        URL& operator=(const URL& other) {
-            if (this != &other) {
-                URL tmp(other);
+        URL& operator=(const URL& r) {
+            if (this != &r) {
+                URL tmp(r);
                 std::swap(t_, tmp.t_);
             }
             return *this;
@@ -260,13 +260,13 @@ namespace zdb {
         
         /**
          * @brief Move assignment operator.
-         * @param other URL object to move assign.
+         * @param r URL object to move assign.
          */
-        URL& operator=(URL&& other) noexcept {
-            if (this != &other) {
+        URL& operator=(URL&& r) noexcept {
+            if (this != &r) {
                 if (t_) URL_free(&t_);
-                t_ = other.t_;
-                other.t_ = nullptr;
+                t_ = r.t_;
+                r.t_ = nullptr;
             }
             return *this;
         }
@@ -280,48 +280,54 @@ namespace zdb {
          * @brief Get the protocol of the URL.
          * @return The protocol name.
          */
-        [[nodiscard]] std::string_view protocol() const noexcept { return URL_getProtocol(t_); }
+        [[nodiscard]] constexpr std::string_view protocol() const noexcept { return URL_getProtocol(t_); }
         
         /**
          * @brief Get the user name from the authority part of the URL.
          * @return An optional containing the username specified in the URL,
          * or std::nullopt if not found.
          */
-        [[nodiscard]] std::optional<std::string_view> user() const noexcept { return _to_optional(URL_getUser(t_)); }
+        [[nodiscard]] constexpr std::optional<std::string_view> user() const noexcept { return _to_optional(URL_getUser(t_)); }
         
         /**
          * @brief Get the password from the authority part of the URL.
          * @return An optional containing the password specified in the URL,
          * or std::nullopt if not found.
          */
-        [[nodiscard]] std::optional<std::string_view> password() const noexcept { return _to_optional(URL_getPassword(t_)); }
+        [[nodiscard]] constexpr std::optional<std::string_view> password() const noexcept { return _to_optional(URL_getPassword(t_)); }
         
         /**
          * @brief Get the hostname of the URL.
          * @return An optional containing the hostname specified in the URL,
          * or std::nullopt if not found.
          */
-        [[nodiscard]] std::optional<std::string_view> host() const noexcept { return _to_optional(URL_getHost(t_)); }
+        [[nodiscard]] constexpr std::optional<std::string_view> host() const noexcept { return _to_optional(URL_getHost(t_)); }
         
         /**
          * @brief Get the port of the URL.
          * @return The port number of the URL or -1 if not specified.
          */
-        [[nodiscard]] int port() const noexcept { return URL_getPort(t_); }
+        [[nodiscard]] constexpr int port() const noexcept { return URL_getPort(t_); }
         
         /**
          * @brief Get the path of the URL.
          * @return An optional containing the path of the URL,
          * or std::nullopt if not found.
          */
-        [[nodiscard]] std::optional<std::string_view> path() const noexcept { return _to_optional(URL_getPath(t_)); }
+        [[nodiscard]] constexpr std::optional<std::string_view> path() const noexcept { return _to_optional(URL_getPath(t_)); }
         
         /**
          * @brief Get the query string of the URL.
          * @return An optional containing the query string of the URL,
          * or std::nullopt if not found.
          */
-        [[nodiscard]] std::optional<std::string_view> queryString() const noexcept { return _to_optional(URL_getQueryString(t_)); }
+        [[nodiscard]] constexpr std::optional<std::string_view> queryString() const noexcept { return _to_optional(URL_getQueryString(t_)); }
+        
+        /**
+         * @brief Returns a string representation of this URL object.
+         * @return The URL string.
+         */
+        [[nodiscard]] constexpr std::string_view toString() const noexcept { return URL_toString(t_); }
         
         /**
          * @brief Returns a vector of string objects with the names of the
@@ -345,15 +351,9 @@ namespace zdb {
          * @param name The parameter name to lookup.
          * @return An optional containing the parameter value, or std::nullopt if not found.
          */
-        [[nodiscard]] std::optional<std::string_view> parameter(const std::string& name) const {
+        [[nodiscard]] std::optional<std::string_view> parameter(const std::string& name) const noexcept {
             return _to_optional(URL_getParameter(t_, name.c_str()));
         }
-        
-        /**
-         * @brief Returns a string representation of this URL object.
-         * @return The URL string.
-         */
-        [[nodiscard]] std::string_view toString() const noexcept { return URL_toString(t_); }
         
         /**
          * @brief Cast operator to URL_T.
@@ -537,7 +537,7 @@ namespace zdb {
         
         /**
          * @brief Retrieves the value of the designated column as a byte span.
-         * @param columnIndex The index of the column to retrieve (1-based).
+         * @param columnIndex The first column is 1, the second is 2, ...
          * @return An optional span of bytes containing the blob data, or std::nullopt if the value is SQL NULL.
          * @throws sql_exception If a database access error occurs or columnIndex is outside the valid range.
          */
@@ -662,8 +662,10 @@ namespace zdb {
         
         /**
          * @brief Sets the string parameter at the given index.
-         * @param parameterIndex The index of the parameter to set (1-based).
+         * @param parameterIndex The first parameter is 1, the second is 2,..
          * @param x The string value to set.
+         * @throws sql_exception If a database access error occurs or parameterIndex
+         *         is outside the valid range
          * @note The string data must remain valid until execute() or executeQuery()
          *       is called. This method does not copy the string data.
          */
@@ -674,8 +676,10 @@ namespace zdb {
         
         /**
          * @brief Sets the string parameter at the given index.
-         * @param parameterIndex The index of the parameter to set (1-based).
+         * @param parameterIndex The first parameter is 1, the second is 2,..
          * @param x The string value to set.
+         * @throws sql_exception If a database access error occurs or parameterIndex
+         *         is outside the valid range
          * @note The string data must remain valid until execute() or executeQuery()
          *       is called. This method does not copy the string data.
          */
@@ -683,10 +687,12 @@ namespace zdb {
             setString(parameterIndex, std::string_view(x));
         }
         
-       /**
+        /**
          * @brief Sets the integer parameter at the given index.
-         * @param parameterIndex The index of the parameter to set (1-based).
+         * @param parameterIndex The first parameter is 1, the second is 2,..
          * @param x The integer value to set.
+         * @throws sql_exception If a database access error occurs or parameterIndex
+         *         is outside the valid range
          */
         void setInt(int parameterIndex, int x) {
             except_wrapper(PreparedStatement_setInt(t_, parameterIndex, x));
@@ -694,8 +700,10 @@ namespace zdb {
         
         /**
          * @brief Sets the long long parameter at the given index.
-         * @param parameterIndex The index of the parameter to set (1-based).
+         * @param parameterIndex The first parameter is 1, the second is 2,..
          * @param x The long long value to set.
+         * @throws sql_exception If a database access error occurs or parameterIndex
+         *         is outside the valid range
          */
         void setLLong(int parameterIndex, long long x) {
             except_wrapper(PreparedStatement_setLLong(t_, parameterIndex, x));
@@ -703,8 +711,10 @@ namespace zdb {
         
         /**
          * @brief Sets the double parameter at the given index.
-         * @param parameterIndex The index of the parameter to set (1-based).
+         * @param parameterIndex The first parameter is 1, the second is 2,..
          * @param x The double value to set.
+         * @throws sql_exception If a database access error occurs or parameterIndex
+         *         is outside the valid range
          */
         void setDouble(int parameterIndex, double x) {
             except_wrapper(PreparedStatement_setDouble(t_, parameterIndex, x));
@@ -712,8 +722,10 @@ namespace zdb {
         
         /**
          * @brief Sets the blob parameter at the given index.
-         * @param parameterIndex The index of the parameter to set (1-based).
+         * @param parameterIndex The first parameter is 1, the second is 2,..
          * @param x The blob value to set.
+         * @throws sql_exception If a database access error occurs or parameterIndex
+         *         is outside the valid range
          * @note The blob data must remain valid until execute() or executeQuery()
          *       is called. This method does not copy the blob data.
          */
@@ -728,8 +740,10 @@ namespace zdb {
         
         /**
          * @brief Sets the timestamp parameter at the given index.
-         * @param parameterIndex The index of the parameter to set (1-based).
+         * @param parameterIndex The first parameter is 1, the second is 2,..
          * @param x The timestamp value to set.
+         * @throws sql_exception If a database access error occurs or parameterIndex
+         *         is outside the valid range
          */
         void setTimestamp(int parameterIndex, time_t x) {
             except_wrapper(PreparedStatement_setTimestamp(t_, parameterIndex, x));
@@ -737,7 +751,9 @@ namespace zdb {
         
         /**
          * @brief Sets the parameter at the given index to SQL NULL.
-         * @param parameterIndex The index of the parameter to set (1-based).
+         * @param parameterIndex The first parameter is 1, the second is 2,..
+         * @throws sql_exception If a database access error occurs or parameterIndex
+         *         is outside the valid range
          */
         void setNull(int parameterIndex) {
             except_wrapper(PreparedStatement_setNull(t_, parameterIndex));
@@ -745,6 +761,8 @@ namespace zdb {
         
         /**
          * @brief Executes the prepared SQL statement.
+         * @throws sql_exception If a database access error occurs or parameterIndex
+         *         is outside the valid range
          */
         void execute() {
             except_wrapper(PreparedStatement_execute(t_));
@@ -754,6 +772,8 @@ namespace zdb {
         /**
          * @brief Executes the prepared SQL query.
          * @return A ResultSet containing the query results.
+         * @throws sql_exception If a database access error occurs or parameterIndex
+         *         is outside the valid range
          */
         [[nodiscard]] ResultSet executeQuery() {
             except_wrapper(
@@ -782,8 +802,10 @@ namespace zdb {
     public:
         /**
          * @brief Binds a string value to the prepared statement.
-         * @param parameterIndex The index of the parameter to bind (1-based).
+         * @param parameterIndex The first parameter is 1, the second is 2,..
          * @param x The string value to bind.
+         * @throws sql_exception If a database access error occurs or parameterIndex
+         *         is outside the valid range
          * @note The string data must remain valid until execute() or executeQuery()
          *       is called. This method does not copy the string data.
          */
@@ -793,8 +815,10 @@ namespace zdb {
         
         /**
          * @brief Binds a string value to the prepared statement.
-         * @param parameterIndex The index of the parameter to bind (1-based).
+         * @param parameterIndex The first parameter is 1, the second is 2,..
          * @param x The string value to bind.
+         * @throws sql_exception If a database access error occurs or parameterIndex
+         *         is outside the valid range
          * @note The string data must remain valid until execute() or executeQuery()
          *       is called. This method does not copy the string data.
          */
@@ -804,8 +828,10 @@ namespace zdb {
         
         /**
          * @brief Binds a string value to the prepared statement.
-         * @param parameterIndex The index of the parameter to bind (1-based).
+         * @param parameterIndex The first parameter is 1, the second is 2,..
          * @param x The string value to bind.
+         * @throws sql_exception If a database access error occurs or parameterIndex
+         *         is outside the valid range
          * @note The string data must remain valid until execute() or executeQuery()
          *       is called. This method does not copy the string data.
          */
@@ -819,8 +845,10 @@ namespace zdb {
         
         /**
          * @brief Binds an arithmetic type (int, double, etc.) and time_t to the prepared statement.
-         * @param parameterIndex The index of the parameter to bind (1-based).
+         * @param parameterIndex The first parameter is 1, the second is 2,..
          * @param x The value to bind.
+         * @throws sql_exception If a database access error occurs or parameterIndex
+         *         is outside the valid range
          */
         template<typename T>
         typename std::enable_if_t<
@@ -842,7 +870,9 @@ namespace zdb {
         
         /**
          * @brief Binds the parameter at the given index to SQL NULL.
-         * @param parameterIndex The index of the parameter to set (1-based).
+         * @param parameterIndex The first parameter is 1, the second is 2,..
+         * @throws sql_exception If a database access error occurs or parameterIndex
+         *         is outside the valid range
          */
         void bind(int parameterIndex, std::nullptr_t) {
             setNull(parameterIndex);
@@ -850,15 +880,17 @@ namespace zdb {
         
         /**
          * @brief Binds blob data to the prepared statement.
-         * @param parameterIndex The index of the parameter to bind (1-based).
+         * @param parameterIndex The first parameter is 1, the second is 2,..
          * @param x The blob value to set.
+         * @throws sql_exception If a database access error occurs or parameterIndex
+         *         is outside the valid range
          * @note The blob data must remain valid until execute() or executeQuery()
          *       is called. This method does not copy the blob data.
          */
         void bind(int parameterIndex, std::span<const std::byte> x) {
             setBlob(parameterIndex, x);
         }
-
+        
     protected:
         friend class Connection;
         
@@ -877,7 +909,7 @@ namespace zdb {
     
     /**
      * @class Connection
-     * @brief A `Connection represent a connection to a SQL database system.
+     * @brief A `Connection` represent a connection to a SQL database system.
      *
      * The Connection class is used to execute SQL statements, manage transactions,
      * and retrieve results. It supports executing statements directly or using
@@ -888,7 +920,7 @@ namespace zdb {
     class Connection : private noncopyable {
     public:
         /**
-         * @brief Destructor, closes the connection if it is open.
+         * @brief Destructor, closes the connection and return the underlying connection to the connection pool
          */
         ~Connection() { if (t_) close(); }
         
@@ -946,7 +978,7 @@ namespace zdb {
         void clear() noexcept { Connection_clear(t_); }
         
         /**
-         * @brief Closes the connection.
+         * @brief Closes the connection and return the underlying connection to the connection pool
          */
         void close() noexcept {
             if (t_) {
@@ -1280,7 +1312,7 @@ namespace zdb {
          * @brief Reaps inactive connections in the pool.
          * @return The number of connections reaped.
          */
-        [[nodiscard]] int reapConnections() noexcept {
+        int reapConnections() noexcept {
             return ConnectionPool_reapConnections(t_);
         }
         
