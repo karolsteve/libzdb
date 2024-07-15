@@ -52,30 +52,27 @@ const std::map<std::string_view, std::string_view> schema {
 
 static void testCreateSchema(ConnectionPool& pool) {
     Connection con = pool.getConnection();
-    try {
-        con.execute("DROP TABLE zild_t;");
-    } catch (...) {}
+    try { con.execute("DROP TABLE zild_t;"); } catch (...) {}
     con.execute(std::string(schema.at(pool.getURL().protocol())));
 }
 
 static void testPrepared(ConnectionPool& pool) {
     Connection con = pool.getConnection();
-    PreparedStatement p1 = con.prepareStatement("INSERT INTO zild_t (name, percent, image, created_at) VALUES(?, ?, ?, ?);");
+    PreparedStatement prep = con.prepareStatement("INSERT INTO zild_t (name, percent, image, created_at) VALUES(?, ?, ?, ?);");
     con.beginTransaction();
     for (const auto& [name, image] : data) {
-        p1.bind(1, name);
-        p1.bind(2, random_double_0_to_10());
-        p1.bind(3, std::span<const std::byte>(
+        prep.bind(1, name);
+        prep.bind(2, random_double_0_to_10());
+        prep.bind(3, std::span<const std::byte>(
             reinterpret_cast<const std::byte*>(image.data()),
             image.size()
         ));
-        p1.bind(4, std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
-        p1.execute();
+        prep.bind(4, std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
+        prep.execute();
     }
     // Implicit prepared statement. Any execute or executeQuery statement which
     // takes parameters are automatically translated into a prepared statement.
-    // Here we also demonstrate how to set a SQL null value by using nullptr which
-    // must be used instead of NULL
+    // Here we also demonstrate how to set a SQL null value by using a nullptr
     con.execute("UPDATE zild_t SET image = ? WHERE id = ?", nullptr, 11);
     con.commit();
 }
@@ -107,21 +104,19 @@ static void testQuery(ConnectionPool& pool) {
 }
 
 static void testException(ConnectionPool& pool) {
-    // Test 1: Regular exception handling
     try {
         Connection con = pool.getConnection();
         PreparedStatement p = con.prepareStatement("blablablabla ?", "bla");
         p.execute();
-        std::cout << "Test 1 failed, did not get exception\n";
+        std::cout << "Test failed, did not get exception\n";
         std::exit(1);
     } catch (const sql_exception& e) { }
     
-    // Test 2: Regular exception handling
     try {
         Connection con = pool.getConnection();
         ResultSet r = con.executeQuery("blablabala");
         r.next();
-        std::cout << "Test 2 failed, did not get exception\n";
+        std::cout << "Test failed, did not get exception\n";
         std::exit(1);
     } catch (const sql_exception& e) { }
 }
@@ -132,15 +127,17 @@ static void testAbortHandler(ConnectionPool& pool) {
     pool.setAbortHandler([&abortHandlerCalled](std::string_view error) {
         abortHandlerCalled = true;
     });
-    
-    // Throwing libzdb exception without a TRY-block will cause the
-    // abort handler to be called. Calling Exception_reset() here to
-    // ensure the call-stack does not have any Exception_Frame attached
+        
+    // Calling Exception_reset() to ensure the call-stack does not
+    // have any Exception_Frame attached so we can do a clean throw
     Exception_reset();
+
+    // Throwing a libzdb exception without a TRY-block will cause the
+    // abort handler to be called, iff set.
     THROW(SQLException, "SQLException");
     
     if (!abortHandlerCalled) {
-        std::cout << "Test 3 failed: Abort handler was not called\n";
+        std::cout << "Test failed: Abort handler was not called\n";
         std::exit(1);
     }
     
@@ -150,17 +147,17 @@ static void testAbortHandler(ConnectionPool& pool) {
         capturedError = error;
     });
     
-    // This should trigger the abort handler
+    // Trigger the abort handler
     THROW(SQLException, "Another SQLException");
     
     // Verify the abort handler was called and captured the error
     if (capturedError.empty()) {
-        std::cout << "Test 4 failed: Abort handler was not called or did not capture error\n";
+        std::cout << "Test failed: Abort handler was not called or did not capture error\n";
         std::exit(1);
     }
     
     // Reset abort handler
-    pool.setAbortHandler(nullptr);
+    pool.setAbortHandler();
 }
 
 static void testDropSchema(ConnectionPool& pool) {
