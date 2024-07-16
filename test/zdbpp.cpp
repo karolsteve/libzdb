@@ -58,18 +58,34 @@ static void testCreateSchema(ConnectionPool& pool) {
 
 static void testPrepared(ConnectionPool& pool) {
     Connection con = pool.getConnection();
+    
     PreparedStatement prep = con.prepareStatement("INSERT INTO zild_t (name, percent, image, created_at) VALUES(?, ?, ?, ?);");
+    
     con.beginTransaction();
     for (const auto& [name, image] : data) {
-        prep.bind(1, name);
-        prep.bind(2, random_double_0_to_10());
-        prep.bind(3, std::span<const std::byte>(
-            reinterpret_cast<const std::byte*>(image.data()),
-            image.size()
-        ));
-        prep.bind(4, std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
+        prep.bindValues(name,
+                        random_double_0_to_10(),
+                        std::span<const std::byte>(reinterpret_cast<const std::byte*>(image.data()), image.size()),
+                        std::chrono::system_clock::to_time_t(std::chrono::system_clock::now())
+                        );
         prep.execute();
     }
+    
+    //Instead of binding all values at once we can also bind values one-by-one
+    prep.bind(1, "Jin Sakai");
+    prep.bind(2, 10);
+    std::string_view kanagawa = "\u795E\u5948\u5DDD\u6C96\u6D6A\u88CF";
+    prep.bind(3, std::span<const std::byte>(reinterpret_cast<const std::byte*>(kanagawa.data()), kanagawa.size()));
+    prep.bind(4, std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
+    prep.execute();
+
+    // If the number of values does not match statement placeholders an exception is thrown
+    try {
+        prep.bindValues("Ubisoft", 6.66);
+        std::cout << "Test failed, did not get exception\n";
+        std::exit(1);
+    } catch (const sql_exception& e) { }
+    
     // Implicit prepared statement. Any execute or executeQuery statement which
     // takes parameters are automatically translated into a prepared statement.
     // Here we also demonstrate how to set a SQL null value by using a nullptr
@@ -79,23 +95,29 @@ static void testPrepared(ConnectionPool& pool) {
 
 static void testQuery(ConnectionPool& pool) {
     Connection con = pool.getConnection();
+    
     // Implicit prepared statement because of parameters
     ResultSet result = con.executeQuery("SELECT id, name, percent, image, created_at FROM zild_t WHERE id < ? ORDER BY id;", 100);
+    
     result.setFetchSize(10); // Optionally set prefetched rows. Default is 100
+    
     assert(result.columnCount() == 5);
-    assert(result.columnName(1).value_or("null") == "id");
+    assert(result.columnName(1).value() == "id");
+    
     while (result.next()) {
         int id = result.getInt(1);
         auto name = result.getString("name");
         double percent = result.getDouble("percent");
         auto blob = result.getBlob("image");
-        std::string created_at = time2iso8601(std::chrono::system_clock::from_time_t(result.getTimestamp("created_at")));
+        auto created_at = time2iso8601(std::chrono::system_clock::from_time_t(result.getTimestamp("created_at")));
+        
         std::cout << std::format("  {:<4}{:<15}{:<7.2f}{:<29}{}\n",
                                  id,
                                  name.value_or("null"),
                                  percent,
                                  blob ? std::string(reinterpret_cast<const char*>(blob->data()), blob->size()) : "null",
                                  created_at);
+        
         // Assert that SQL null above was set
         if (id == 11) {
             assert(result.isNull(4));
@@ -173,9 +195,11 @@ int main() {
     "E.g. oracle://scott:tiger@localhost:1521/servicename\n"
     "To exit, enter '.' on a single line\n\nConnection URL> ";
     std::cout << "\033[0;35m\nC++ zdbpp.h API Test:\033[0m\n\n" << help;
+    
     for (std::string line; std::getline(std::cin, line);) {
         if (line == "q" || line == ".")
             break;
+    
         std::optional<URL> url_opt;
         try {
             url_opt = URL(line);
@@ -184,6 +208,7 @@ int main() {
             std::cout << "Connection URL> ";
             continue;
         }
+        
         ConnectionPool pool(std::move(*url_opt));
         pool.start();
         std::cout << std::string(8, '=') + "> Start Tests\n";
