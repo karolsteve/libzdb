@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2019-2024 Tildeslash Ltd.
  * Copyright (C) 2016 dragon jiang<jianlinlong@gmail.com>
+ * Copyright (C) 2019-2024 Tildeslash Ltd.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files(the "Software"), to deal
@@ -35,6 +35,8 @@
 #include <memory>
 #include <span>
 #include <variant>
+#include <concepts>
+#include <ranges>
 
 /*
 # zdbpp.h - C++ Interface for libzdb
@@ -91,9 +93,6 @@ To use libzdb in your C++ project, include zdbpp.h and use the `zdb` namespace:
      auto name = result.getString("name").value_or("N/A");
      auto hired = result.getTimestamp("hired");
      auto blob = result.getBlob("image");
-     if (blob) {
-         // Process image data...
-     }
      // ...
  }
 ```
@@ -129,10 +128,7 @@ PreparedStatement prep = con.prepareStatement(
 
 con.beginTransaction();
 for (const auto &employee : employees) {
-    // Polymorphic bind
-    prep.bind(1, employee.name);
-    prep.bind(2, employee.hired);
-    prep.bind(3, std::make_tuple(employee.image.data(), employee.image.size()));
+    prep.bindValues(employee.name, employee.hired, employee.image);
     prep.execute();
 }
 con.commit();
@@ -162,7 +158,7 @@ Visit [libzd's homepage](https://www.tildeslash.com/libzdb/) for documentation a
 */
 
 namespace zdb {
-    namespace {
+    namespace { // private
         #define except_wrapper(f) TRY { f; } ELSE { throw sql_exception(Exception_frame.message); } END_TRY
         
         constexpr std::optional<std::string_view> _to_optional(const char* str) noexcept {
@@ -184,6 +180,15 @@ namespace zdb {
             noncopyable(noncopyable&&) = delete;
             noncopyable& operator=(noncopyable&&) = delete;
         };
+        
+        template<typename T>
+        concept Stringable = std::convertible_to<T, std::string_view>;
+        
+        template<typename T>
+        concept Numeric = (std::integral<T> || std::floating_point<T>) && !std::is_same_v<T, time_t>;
+        
+        template<typename T>
+        concept Blobable = std::ranges::contiguous_range<T> && std::same_as<std::ranges::range_value_t<T>, std::byte>;
     } // anonymous namespace
     
     
@@ -216,7 +221,7 @@ namespace zdb {
      * @class URL
      * @brief Represents an immutable Uniform Resource Locator.
      *
-     * Example: `http://user:password@www.foo.bar:8080/document/index.csp?querystring#ref`
+     * Example: `postgresql://user:password@example.com:5432/database?use-ssl=true`
      * Supports IPv6 as defined in RFC2732.
      */
     class URL {
@@ -332,8 +337,8 @@ namespace zdb {
         /**
          * @brief Returns a vector of string objects with the names of the
          * parameters contained in this URL.
-         * @return A vector of strings, each string containing the name of
-         * a URL parameter; or an empty vector if the URL has no parameters.
+         * @return A vector of strings, each string containing the name of a URL parameter; or
+         *         an empty vector if the URL has no parameters.
          */
         [[nodiscard]] std::vector<std::string_view> parameterNames() const noexcept {
             std::vector<std::string_view> names;
@@ -370,19 +375,15 @@ namespace zdb {
      * @class ResultSet
      * @brief Represents a database result set.
      *
-     * Created by executing a SQL SELECT statement. Maintains a cursor pointing to its current row of data.
+     * Created by executing a SQL SELECT statement using either Connection::executeQuery() or
+     * PreparedStatement::executeQuery(). Maintains a cursor pointing to its current row of data.
      * Example:
      * @code
      * ResultSet result = con.executeQuery("SELECT ssn, name, picture FROM employees");
      * while (result.next()) {
      *     int ssn = result.getInt("ssn");
-     *     auto name = result.getString("name").value_or("null");
+     *     auto name = result.getString("name");
      *     auto blob = result.getBlob("picture");
-     *     if (blob) {
-     *          // Use the blob...
-     *     } else {
-     *          // Handle the case where the blob is not found...
-     *     }
      *     // ...
      * }
      * @endcode
@@ -635,15 +636,21 @@ namespace zdb {
      * @brief Represents a single SQL statement pre-compiled into byte code.
      *
      * A PreparedStatement can contain SQL parameters, which are set using the
-     * various set methods. A PreparedStatement is created by calling
+     * various bind methods. A PreparedStatement is created by calling
      * Connection::prepareStatement().
      *
      * Example usage:
      * @code
      * PreparedStatement stmt = con.prepareStatement("INSERT INTO employee(name, picture) VALUES(?, ?)");
-     * stmt.setString(1, "Kamiya Kaoru");
-     * stmt.setBlob(2, jpeg);
+     * stmt.bindValues("Kamiya Kaoru", jpeg);
      * stmt.execute();
+     *
+     * // Alternative, bind one by one value
+     * PreparedStatement stmt = con.prepareStatement("INSERT INTO employee(name, picture) VALUES(?, ?)");
+     * stmt.bind(1, "Kamiya Kaoru");
+     * stmt.bind(2, jpeg);
+     * stmt.execute();
+     * 
      * @endcode
      */
     class PreparedStatement : private noncopyable {
@@ -661,67 +668,40 @@ namespace zdb {
         operator PreparedStatement_T() const noexcept { return t_; }
         
         /**
-         * @brief Sets the string parameter at the given index.
+         * @brief Binds a string-like value to the prepared statement.
          * @param parameterIndex The first parameter is 1, the second is 2,..
-         * @param x The string value to set.
+         * @param x The string-like value to bind.
          * @throws sql_exception If a database access error occurs or parameterIndex
          *         is outside the valid range
          * @note The string data must remain valid until execute() or executeQuery()
          *       is called. This method does not copy the string data.
          */
-        void setString(int parameterIndex, std::string_view x) {
-            storage_[parameterIndex] = x;
-            except_wrapper(PreparedStatement_setString(t_, parameterIndex, x.data()));
+        void bind(int parameterIndex, Stringable auto&& x) {
+            store_[parameterIndex] = std::string_view(x);
+            except_wrapper(PreparedStatement_setString(t_, parameterIndex, std::string_view(x).data()));
         }
         
         /**
-         * @brief Sets the string parameter at the given index.
+         * @brief Binds a numeric value to the prepared statement.
          * @param parameterIndex The first parameter is 1, the second is 2,..
-         * @param x The string value to set.
-         * @throws sql_exception If a database access error occurs or parameterIndex
-         *         is outside the valid range
-         * @note The string data must remain valid until execute() or executeQuery()
-         *       is called. This method does not copy the string data.
-         */
-        void setString(int parameterIndex, const std::string& x) {
-            setString(parameterIndex, std::string_view(x));
-        }
-        
-        /**
-         * @brief Sets the integer parameter at the given index.
-         * @param parameterIndex The first parameter is 1, the second is 2,..
-         * @param x The integer value to set.
+         * @param x The numeric value to bind.
          * @throws sql_exception If a database access error occurs or parameterIndex
          *         is outside the valid range
          */
-        void setInt(int parameterIndex, int x) {
-            except_wrapper(PreparedStatement_setInt(t_, parameterIndex, x));
+        void bind(int parameterIndex, Numeric auto x) {
+            if constexpr (std::integral<decltype(x)>) {
+                if constexpr (sizeof(x) <= sizeof(int)) {
+                    except_wrapper(PreparedStatement_setInt(t_, parameterIndex, static_cast<int>(x)));
+                } else {
+                    except_wrapper(PreparedStatement_setLLong(t_, parameterIndex, static_cast<long long>(x)));
+                }
+            } else {
+                except_wrapper(PreparedStatement_setDouble(t_, parameterIndex, static_cast<double>(x)));
+            }
         }
         
         /**
-         * @brief Sets the long long parameter at the given index.
-         * @param parameterIndex The first parameter is 1, the second is 2,..
-         * @param x The long long value to set.
-         * @throws sql_exception If a database access error occurs or parameterIndex
-         *         is outside the valid range
-         */
-        void setLLong(int parameterIndex, long long x) {
-            except_wrapper(PreparedStatement_setLLong(t_, parameterIndex, x));
-        }
-        
-        /**
-         * @brief Sets the double parameter at the given index.
-         * @param parameterIndex The first parameter is 1, the second is 2,..
-         * @param x The double value to set.
-         * @throws sql_exception If a database access error occurs or parameterIndex
-         *         is outside the valid range
-         */
-        void setDouble(int parameterIndex, double x) {
-            except_wrapper(PreparedStatement_setDouble(t_, parameterIndex, x));
-        }
-        
-        /**
-         * @brief Sets the blob parameter at the given index.
+         * @brief Binds blob data to the prepared statement.
          * @param parameterIndex The first parameter is 1, the second is 2,..
          * @param x The blob value to set.
          * @throws sql_exception If a database access error occurs or parameterIndex
@@ -729,56 +709,70 @@ namespace zdb {
          * @note The blob data must remain valid until execute() or executeQuery()
          *       is called. This method does not copy the blob data.
          */
-        void setBlob(int parameterIndex, std::span<const std::byte> x) {
-            if (x.empty()) {
+        void bind(int parameterIndex, Blobable auto&& x) {
+            if (std::empty(x)) {
                 setNull(parameterIndex);
             } else {
-                storage_[parameterIndex] = x;
-                except_wrapper(PreparedStatement_setBlob(t_, parameterIndex, x.data(), static_cast<int>(x.size())));
+                store_[parameterIndex] = std::span<const std::byte>(std::data(x), std::size(x));
+                except_wrapper(PreparedStatement_setBlob(t_, parameterIndex, std::data(x), static_cast<int>(std::size(x))));
             }
         }
         
         /**
-         * @brief Sets the timestamp parameter at the given index.
+         * @brief Binds a timestamp value to the prepared statement.
          * @param parameterIndex The first parameter is 1, the second is 2,..
          * @param x The timestamp value to set.
          * @throws sql_exception If a database access error occurs or parameterIndex
          *         is outside the valid range
          */
-        void setTimestamp(int parameterIndex, time_t x) {
+        void bind(int parameterIndex, time_t x) {
             except_wrapper(PreparedStatement_setTimestamp(t_, parameterIndex, x));
         }
         
         /**
-         * @brief Sets the parameter at the given index to SQL NULL.
+         * @brief Binds a NULL value to the prepared statement.
          * @param parameterIndex The first parameter is 1, the second is 2,..
          * @throws sql_exception If a database access error occurs or parameterIndex
          *         is outside the valid range
          */
-        void setNull(int parameterIndex) {
-            except_wrapper(PreparedStatement_setNull(t_, parameterIndex));
+        void bind(int parameterIndex, std::nullptr_t) {
+            setNull(parameterIndex);
         }
         
         /**
+         * @brief Binds multiple values to a Prepared Statement all at once.
+         * @param args Values to bind to the Prepared Statement
+         * @throws sql_exception If a database access error occurs or if the number of
+         *         values does not match the placeholders in the Prepared Statement
+         * @note Reference types must remain valid until execute() or executeQuery()
+         *       is called. This method does not copy any data.
+         */
+        template<typename... Args>
+        void bindValues(Args&&... args) {
+            if (sizeof...(Args) != getParameterCount()) {
+                throw sql_exception("Number of values doesn't match placeholders in statement");
+            }
+            bindValuesHelper(1, std::forward<Args>(args)...);
+        }
+
+        /**
          * @brief Executes the prepared SQL statement.
-         * @throws sql_exception If a database access error occurs or parameterIndex
-         *         is outside the valid range
+         * @throws sql_exception If a database access error occurs
          */
         void execute() {
             except_wrapper(PreparedStatement_execute(t_));
-            storage_.clear();
+            store_.clear();
         }
         
         /**
          * @brief Executes the prepared SQL query.
          * @return A ResultSet containing the query results.
-         * @throws sql_exception If a database access error occurs or parameterIndex
-         *         is outside the valid range
+         * @throws sql_exception If a database access error occurs
          */
         [[nodiscard]] ResultSet executeQuery() {
             except_wrapper(
                            ResultSet_T r = PreparedStatement_executeQuery(t_);
-                           storage_.clear();
+                           store_.clear();
                            RETURN ResultSet(r);
                            );
         }
@@ -798,99 +792,7 @@ namespace zdb {
         [[nodiscard]] int getParameterCount() noexcept {
             return PreparedStatement_getParameterCount(t_);
         }
-        
-    public:
-        /**
-         * @brief Binds a string value to the prepared statement.
-         * @param parameterIndex The first parameter is 1, the second is 2,..
-         * @param x The string value to bind.
-         * @throws sql_exception If a database access error occurs or parameterIndex
-         *         is outside the valid range
-         * @note The string data must remain valid until execute() or executeQuery()
-         *       is called. This method does not copy the string data.
-         */
-        void bind(int parameterIndex, const std::string& x) {
-            setString(parameterIndex, x);
-        }
-        
-        /**
-         * @brief Binds a string value to the prepared statement.
-         * @param parameterIndex The first parameter is 1, the second is 2,..
-         * @param x The string value to bind.
-         * @throws sql_exception If a database access error occurs or parameterIndex
-         *         is outside the valid range
-         * @note The string data must remain valid until execute() or executeQuery()
-         *       is called. This method does not copy the string data.
-         */
-        void bind(int parameterIndex, std::string_view x) {
-            setString(parameterIndex, x);
-        }
-        
-        /**
-         * @brief Binds a string value to the prepared statement.
-         * @param parameterIndex The first parameter is 1, the second is 2,..
-         * @param x The string value to bind.
-         * @throws sql_exception If a database access error occurs or parameterIndex
-         *         is outside the valid range
-         * @note The string data must remain valid until execute() or executeQuery()
-         *       is called. This method does not copy the string data.
-         */
-        void bind(int parameterIndex, const char* x) {
-            if (x == nullptr) {
-                setNull(parameterIndex);
-            } else {
-                setString(parameterIndex, static_cast<std::string_view>(x));
-            }
-        }
-        
-        /**
-         * @brief Binds an arithmetic type (int, double, etc.) and time_t to the prepared statement.
-         * @param parameterIndex The first parameter is 1, the second is 2,..
-         * @param x The value to bind.
-         * @throws sql_exception If a database access error occurs or parameterIndex
-         *         is outside the valid range
-         */
-        template<typename T>
-        typename std::enable_if_t<
-        std::is_arithmetic_v<T> || std::is_same_v<T, time_t>,
-        void
-        > bind(int parameterIndex, T x) {
-            if constexpr (std::is_same_v<T, time_t>) {
-                setTimestamp(parameterIndex, x);
-            } else if constexpr (std::is_integral_v<T>) {
-                if constexpr (sizeof(T) <= sizeof(int)) {
-                    setInt(parameterIndex, static_cast<int>(x));
-                } else {
-                    setLLong(parameterIndex, static_cast<long long>(x));
-                }
-            } else if constexpr (std::is_floating_point_v<T>) {
-                setDouble(parameterIndex, static_cast<double>(x));
-            }
-        }
-        
-        /**
-         * @brief Binds the parameter at the given index to SQL NULL.
-         * @param parameterIndex The first parameter is 1, the second is 2,..
-         * @throws sql_exception If a database access error occurs or parameterIndex
-         *         is outside the valid range
-         */
-        void bind(int parameterIndex, std::nullptr_t) {
-            setNull(parameterIndex);
-        }
-        
-        /**
-         * @brief Binds blob data to the prepared statement.
-         * @param parameterIndex The first parameter is 1, the second is 2,..
-         * @param x The blob value to set.
-         * @throws sql_exception If a database access error occurs or parameterIndex
-         *         is outside the valid range
-         * @note The blob data must remain valid until execute() or executeQuery()
-         *       is called. This method does not copy the blob data.
-         */
-        void bind(int parameterIndex, std::span<const std::byte> x) {
-            setBlob(parameterIndex, x);
-        }
-        
+                
     protected:
         friend class Connection;
         
@@ -902,10 +804,22 @@ namespace zdb {
         
     private:
         PreparedStatement_T t_;
-        // A store to ensure that we have valid references to the data
-        std::unordered_map<int, std::variant<std::string_view, std::span<const std::byte>>> storage_;
+        // A store to ensure that we have valid references to reference data
+        std::unordered_map<int, std::variant<std::string_view, std::span<const std::byte>>> store_;
+        
+        // Sets the parameter at the given index to SQL NULL.
+        void setNull(int parameterIndex) { except_wrapper(PreparedStatement_setNull(t_, parameterIndex)); }
+        
+        // Helper function to recursively bind all values
+        template<typename T, typename... Rest>
+        void bindValuesHelper(int index, T&& arg, Rest&&... rest) {
+            bind(index, std::forward<T>(arg));
+            if constexpr (sizeof...(Rest) > 0) {
+                bindValuesHelper(index + 1, std::forward<Rest>(rest)...);
+            }
+        }
     };
-
+    
     
     /**
      * @class Connection
