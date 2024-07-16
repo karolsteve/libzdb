@@ -35,36 +35,36 @@
  */
 
 #define Thread_T pthread_t
-#define Sem_T   pthread_cond_t			  
+#define Sem_T   pthread_cond_t
 #define Mutex_T pthread_mutex_t
 #define Once_T pthread_once_t
 #define ThreadData_T pthread_key_t
-#define wrapper(F) do { int status=F; \
+#define _trapper(F) do { int status=F; \
         if (status!=0 && status!=ETIMEDOUT) \
-                ABORT("Thread: %s\n", System_getError(status)); \
+            ABORT("Thread: %s\n", System_getError(status)); \
         } while (0)
 #define Thread_create(thread, threadFunc, threadArgs) \
-        wrapper(pthread_create(&thread, NULL, threadFunc, (void*)threadArgs))
+        _trapper(pthread_create(&thread, NULL, threadFunc, (void*)threadArgs))
 #define Thread_self() pthread_self()
-#define Thread_detach(thread) wrapper(pthread_detach(thread))
-#define Thread_cancel(thread) wrapper(pthread_cancel(thread))
-#define Thread_join(thread) wrapper(pthread_join(thread, NULL))
+#define Thread_detach(thread) _trapper(pthread_detach(thread))
+#define Thread_cancel(thread) _trapper(pthread_cancel(thread))
+#define Thread_join(thread) _trapper(pthread_join(thread, NULL))
 #define Thread_once(control, ctor) pthread_once(&(control), ctor)
-#define Sem_init(sem) wrapper(pthread_cond_init(&sem, NULL))
-#define Sem_wait(sem, mutex) wrapper(pthread_cond_wait(&sem, &mutex))
-#define Sem_signal(sem) wrapper(pthread_cond_signal(&sem))
-#define Sem_broadcast(sem) wrapper(pthread_cond_broadcast(&sem))
-#define Sem_destroy(sem) wrapper(pthread_cond_destroy(&sem))
+#define Sem_init(sem) _trapper(pthread_cond_init(&sem, NULL))
+#define Sem_wait(sem, mutex) _trapper(pthread_cond_wait(&sem, &mutex))
+#define Sem_signal(sem) _trapper(pthread_cond_signal(&sem))
+#define Sem_broadcast(sem) _trapper(pthread_cond_broadcast(&sem))
+#define Sem_destroy(sem) _trapper(pthread_cond_destroy(&sem))
 #define Sem_timeWait(sem, mutex, time) \
-        wrapper(pthread_cond_timedwait(&sem, &mutex, &time))
-#define Mutex_init(mutex) wrapper(pthread_mutex_init(&mutex, NULL))
-#define Mutex_destroy(mutex) wrapper(pthread_mutex_destroy(&mutex))
-#define Mutex_lock(mutex) wrapper(pthread_mutex_lock(&mutex))
-#define Mutex_unlock(mutex) wrapper(pthread_mutex_unlock(&mutex))
+        _trapper(pthread_cond_timedwait(&sem, &mutex, &time))
+#define Mutex_init(mutex) _trapper(pthread_mutex_init(&mutex, NULL))
+#define Mutex_destroy(mutex) _trapper(pthread_mutex_destroy(&mutex))
+#define Mutex_lock(mutex) _trapper(pthread_mutex_lock(&mutex))
+#define Mutex_unlock(mutex) _trapper(pthread_mutex_unlock(&mutex))
 #define LOCK(mutex) do { Mutex_T *_yymutex=&(mutex); \
-        wrapper(pthread_mutex_lock(_yymutex));
-#define END_LOCK wrapper(pthread_mutex_unlock(_yymutex)); } while (0)
-#define ThreadData_create(key, dtor) wrapper(pthread_key_create(&(key), dtor))
+        _trapper(pthread_mutex_lock(_yymutex));
+#define END_LOCK _trapper(pthread_mutex_unlock(_yymutex)); } while (0)
+#define ThreadData_create(key, dtor) _trapper(pthread_key_create(&(key), dtor))
 #define ThreadData_set(key, value) pthread_setspecific((key), (value))
 #define ThreadData_get(key) pthread_getspecific((key))
 
