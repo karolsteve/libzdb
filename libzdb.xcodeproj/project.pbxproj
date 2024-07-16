@@ -852,7 +852,7 @@
 					/usr/local/mysql/lib,
 					/opt/local/lib,
 				);
-				MACOSX_DEPLOYMENT_TARGET = 13.3;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MERGEABLE_LIBRARY = NO;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
@@ -935,7 +935,7 @@
 					/usr/local/mysql/lib,
 					/opt/local/lib,
 				);
-				MACOSX_DEPLOYMENT_TARGET = 13.3;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MERGEABLE_LIBRARY = NO;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
