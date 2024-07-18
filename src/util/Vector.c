@@ -176,6 +176,18 @@ void **Vector_toArray(T V) {
 	return array;
 }
 
+
+int Vector_indexOf(T V, void *e) {
+        assert(V);
+        for (int i = 0; i < V->length; i++) {
+                if (V->array[i] == e) {
+                        return i;
+                }
+        }
+        return -1;
+}
+
+
 #ifdef PACKAGE_PROTECTED
 #pragma GCC visibility pop
 #endif

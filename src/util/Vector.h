@@ -162,6 +162,15 @@ void Vector_map(T V, void apply(const void *element, void *ap), void *ap);
  * @return A pointer to the first element in the array
  */
 void **Vector_toArray(T V);
-        
+
+
+/**
+ * Returns the index of the first occurrence of element 'e' in the Vector.
+ * @param V A Vector object
+ * @param e The element to search for
+ * @return The index of 'e' if found, or -1 if not found
+ */
+int Vector_indexOf(T V, void *e);
+
 #undef T
 #endif

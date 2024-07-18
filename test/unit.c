@@ -730,8 +730,25 @@ static void testVector(void) {
                 Vector_free(&vector);
                 assert(vector == NULL);
         }
-        printf("=> Test7: OK\n\n");        
-
+        printf("=> Test7: OK\n\n");
+        
+        printf("=> Test8: indexOf\n");
+        {
+                int i;
+                char b[] = "abcdefghijklmnopqrstuvwxyz";
+                vector = Vector_new(16);
+                assert(vector);
+                for (i = 0; i<26; i++)
+                        Vector_push(vector, &b[i]);
+                assert(Vector_size(vector) == 26);
+                for (i = 0; i < Vector_size(vector); i++) {
+                        assert(i == Vector_indexOf(vector, &b[i]));
+                }
+                Vector_free(&vector);
+                assert(vector == NULL);
+        }
+        printf("=> Test8: OK\n\n");
+        
         printf("============> Vector Tests: OK\n\n");
 }
 
