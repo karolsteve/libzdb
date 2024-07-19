@@ -342,8 +342,11 @@ static void testPool(const char *testURL) {
                 ConnectionPool_start(pool);
                 assert(4==ConnectionPool_size(pool));
                 printf("Creating 20 Connections..");
-                for (i = 0; i<20; i++)
-                        Vector_push(v, ConnectionPool_getConnection(pool));
+                for (i = 0; i<20; i++) {
+                        Connection_T con = ConnectionPool_getConnection(pool);
+                        assert(con);
+                        Vector_push(v, con);
+                }
                 assert(ConnectionPool_size(pool) == 20);
                 assert(ConnectionPool_active(pool) == 20);
                 printf("success\n");
