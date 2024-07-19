@@ -87,7 +87,7 @@ struct Connection_S {
         bool isAvailable;
         int queryTimeout;
         Vector_T prepared;
-        int isInTransaction;
+        int inTransaction;
         int fetchSizeDefault;
         time_t lastAccessedTime;
         ResultSet_T resultSet;
@@ -135,7 +135,7 @@ T Connection_new(void *pool, char **error) {
         NEW(C);
         C->parent = pool;
         C->isAvailable = true;
-        C->isInTransaction = false;
+        C->inTransaction = false;
         C->prepared = Vector_new(4);
         C->lastAccessedTime = Time_now();
         C->url = ConnectionPool_getURL(pool);
@@ -175,12 +175,6 @@ bool Connection_isAvailable(T C) {
 time_t Connection_getLastAccessedTime(T C) {
         assert(C);
         return C->lastAccessedTime;
-}
-
-
-bool Connection_isInTransaction(T C) {
-        assert(C);
-        return (C->isInTransaction > 0);
 }
 
 
@@ -265,14 +259,20 @@ void Connection_beginTransaction(T C) {
         assert(C);
         if (! C->op->beginTransaction(C->D))
                 THROW(SQLException, "%s", Connection_getLastError(C));
-        C->isInTransaction++;
+        C->inTransaction++;
+}
+
+
+bool Connection_inTransaction(T C) {
+        assert(C);
+        return (C->inTransaction > 0);
 }
 
 
 void Connection_commit(T C) {
         assert(C);
-        if (C->isInTransaction)
-                C->isInTransaction = 0;
+        if (C->inTransaction)
+                C->inTransaction = 0;
         // Even if we are not in a transaction, call the delegate anyway and propagate any errors
         if (! C->op->commit(C->D))
                 THROW(SQLException, "%s", Connection_getLastError(C));
@@ -281,10 +281,10 @@ void Connection_commit(T C) {
 
 void Connection_rollback(T C) {
         assert(C);
-        if (C->isInTransaction) {
+        if (C->inTransaction) {
                 // Clear any pending resultset statements first
                 Connection_clear(C);
-                C->isInTransaction = 0;
+                C->inTransaction = 0;
         }
         // Even if we are not in a transaction, call the delegate anyway and propagate any errors
         if (! C->op->rollback(C->D))
@@ -352,6 +352,9 @@ const char *Connection_getLastError(T C) {
         const char *s = C->op->getLastError(C->D);
         return STR_DEF(s) ? s : "?";
 }
+
+
+/* --------------------------------------------------------- Class methods */
 
 
 bool Connection_isSupported(const char *url) {

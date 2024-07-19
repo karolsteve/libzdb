@@ -28,22 +28,22 @@
 
 
 /**
- * A <b>Connection</b> represent a connection to a SQL database system.
+ * A **Connection** represents a connection to a SQL database system.
  *
  * Use a Connection to execute SQL statements. There are three ways to
  * execute statements: Connection_execute() is used to execute SQL
- * statements that does not return a result set. Such statements are INSERT,
- * UPDATE or DELETE.  Connection_executeQuery() is used to execute a SQL 
+ * statements that do not return a result set. Such statements are INSERT,
+ * UPDATE or DELETE. Connection_executeQuery() is used to execute a SQL
  * SELECT statement and return a result set. These methods can only handle
  * values which can be expressed as C-strings. If you need to handle binary
- * data, such as inserting a blob value into the database, use a 
+ * data, such as inserting a blob value into the database, use a
  * PreparedStatement object to execute the SQL statement. The factory method
- * Connection_prepareStatement() is used to obtain a PreparedStatement object. 
+ * Connection_prepareStatement() is used to obtain a PreparedStatement object.
  *
  * The method Connection_executeQuery() will return an empty ResultSet (not null)
- * if the SQL statement did not return any values.  A ResultSet lives until the
+ * if the SQL statement did not return any values. A ResultSet lives until the
  * next call to Connection execute or until the Connection is returned
- * to the Connection Pool. If an error occur during execution, an SQLException
+ * to the Connection Pool. If an error occurs during execution, an SQLException
  * is thrown.
  *
  * Any SQL statement that changes the database (basically, any SQL
@@ -51,13 +51,14 @@
  * if one is not already in effect. Automatically started transactions
  * are committed at the conclusion of the command.
  *
- * Transactions can also be started manually using 
+ * Transactions can also be started manually using
  * Connection_beginTransaction(). Such transactions usually persist
  * until the next call to Connection_commit() or Connection_rollback().
- * A transaction will also rollback if the database is closed or if an 
+ * A transaction will also rollback if the database is closed or if an
  * error occurs. Nested transactions are not allowed.
  *
- * <i>A Connection is reentrant, but not thread-safe and should only be used by one thread (at the time).</i>
+ * *A Connection is reentrant, but not thread-safe and should only be used 
+ * by one thread (at a time).*
  *
  * @see ResultSet.h PreparedStatement.h SQLException.h
  * @file
@@ -71,6 +72,7 @@ typedef struct Connection_S *T;
 
 /**
  * Create a new Connection.
+ *
  * @param pool The parent connection pool
  * @param error Connection error or NULL if no error was found
  * @return A new Connection object or NULL on error
@@ -80,6 +82,7 @@ T Connection_new(void *pool, char **error) __attribute__ ((visibility("hidden"))
 
 /**
  * Destroy a Connection and release allocated resources.
+ *
  * @param C A Connection object reference
  */
 void Connection_free(T *C) __attribute__ ((visibility("hidden")));
@@ -87,6 +90,7 @@ void Connection_free(T *C) __attribute__ ((visibility("hidden")));
 
 /**
  * Set if this Connection is available and not already in use.
+ *
  * @param C A Connection object
  * @param isAvailable true if this Connection is available otherwise false
  */
@@ -94,31 +98,24 @@ void Connection_setAvailable(T C, bool isAvailable) __attribute__ ((visibility("
 
 
 /**
- * Get the availablity of this Connection.
+ * Get the availability of this Connection.
+ *
  * @param C A Connection object
- * @return true If this Connection is available otherwise false
+ * @return true if this Connection is available otherwise false
  */
 bool Connection_isAvailable(T C) __attribute__ ((visibility("hidden")));
 
 
 /**
  * Return the last time this Connection was accessed from the Connection Pool.
- * The time is returned as the number of seconds since midnight, January 1, 
+ * The time is returned as the number of seconds since midnight, January 1,
  * 1970 GMT. Actions that your application takes, such as calling the public
- * methods of this class does not affect this time.
- * @param C A Connection object
+ * methods of this class do not affect this time.
+ * 
+ *@param C A Connection object
  * @return The last time (seconds) this Connection was accessed
  */
 time_t Connection_getLastAccessedTime(T C) __attribute__ ((visibility("hidden")));
-
-
-/**
- * Return true if this Connection is in a transaction that has not
- * been committed.
- * @param C A Connection object
- * @return true if this Connection is in a transaction otherwise false
- */
-bool Connection_isInTransaction(T C) __attribute__ ((visibility("hidden")));
 
 
 //>> End Protected methods
@@ -131,7 +128,8 @@ bool Connection_isInTransaction(T C) __attribute__ ((visibility("hidden")));
  * SQL (select) statement to finish if the database is busy. If the limit is
  * exceeded, the statement will return immediately with an error.
  * The timeout is set per connection/session. Not all database systems
- * supports query timeout. The default is no query timeout.
+ * support query timeout. The default is no query timeout.
+ *
  * @param C A Connection object
  * @param ms The query timeout limit in milliseconds; zero means
  * there is no timeout limit. Zero is the default value.
@@ -142,6 +140,7 @@ void Connection_setQueryTimeout(T C, int ms);
 /**
  * Retrieves the number of milliseconds the Connection will wait for a
  * SQL statement object to execute.
+ *
  * @param C A Connection object
  * @return The query timeout limit in milliseconds; zero means there
  * is no timeout limit
@@ -151,8 +150,9 @@ int Connection_getQueryTimeout(T C);
 
 /**
  * Sets the limit for the maximum number of rows that any ResultSet
- * object can contain. If the limit is exceeded, the excess rows 
- * are silently dropped.
+ * object (created by this Connection) can contain. If the limit is
+ * exceeded, the excess rows are silently dropped.
+ *
  * @param C A Connection object
  * @param max The new max rows limit; 0 means there is no limit
  */
@@ -163,6 +163,7 @@ void Connection_setMaxRows(T C, int max);
  * Retrieves the maximum number of rows that a ResultSet object
  * produced by this Connection object can contain. If this limit is
  * exceeded, the excess rows are silently dropped.
+ *
  * @param C A Connection object
  * @return The max rows limit; 0 means there is no limit
  */
@@ -171,15 +172,16 @@ int Connection_getMaxRows(T C);
 
 /**
  * Specify the number of rows that should be fetched from the database
- * when more rows are needed for ResultSet objects generated by this 
+ * when more rows are needed for ResultSet objects generated by this
  * Connection. The default value is 100, meaning that a ResultSet will
  * prefetch rows in batches of 100 rows to reduce the network roundtrip
  * to the database. This value can also be set via the URL parameter
- * <code>fetch-size</code> to apply to all connections. This method and
+ * `fetch-size` to apply to all connections. This method and
  * the concept of pre-fetching rows are only applicable to MySQL and Oracle.
+ *
  * @param C A Connection object
- * @param rows The number of rows to fetch (1..INT.MAX)
- * @exception AssertException If <code>rows</code> is less than 1
+ * @param rows The number of rows to fetch (1..INT_MAX)
+ * @exception AssertException If `rows` is less than 1
  */
 void Connection_setFetchSize(T C, int rows);
 
@@ -189,6 +191,7 @@ void Connection_setFetchSize(T C, int rows);
  * when more rows are needed for ResultSet objects generated by this
  * Connection. This method and the concept of pre-fetching rows are only
  * applicable to MySQL and Oracle.
+ *
  * @param C A Connection object
  * @return The number of rows to fetch
  */
@@ -196,46 +199,54 @@ int Connection_getFetchSize(T C);
 
 
 /**
- * Returns this Connection URL
+ * Returns this Connection's URL
+ *
  * @param C A Connection object
- * @return This Connection URL
+ * @return This Connection's URL
  * @see URL.h
  */
 URL_T Connection_getURL(T C);
 
 //@}
 
+/** @name Functions */
+//@{
+
 /**
- * Ping the database server and return true if this Connection is 
- * alive, otherwise false in which case the Connection should be closed. 
+ * Ping the database server and return true if this Connection is
+ * alive, otherwise false in which case the Connection should be closed.
+ *
  * @param C A Connection object
- * @return true if Connection is connected to a database server 
+ * @return true if Connection is connected to a database server
  * otherwise false
  */
 bool Connection_ping(T C);
 
 
 /**
- * Close any ResultSet and PreparedStatements in the Connection. 
+ * Close any ResultSet and PreparedStatements in the Connection.
  * Normally it is not necessary to call this method, but for some
- * implementation (SQLite) it <i>may, in some situations,</i> be 
- * necessary to call this method if a execution sequence error occurs.
+ * implementations (SQLite) it *may, in some situations,* be
+ * necessary to call this method if an execution sequence error occurs.
+ *
  * @param C A Connection object
  */
 void Connection_clear(T C);
 
 
 /**
- * Return connection to the connection pool. The same as calling 
+ * Return connection to the connection pool. The same as calling
  * ConnectionPool_returnConnection() on a connection. If the connection
- * is in an uncommited transaction, rollback is called.
+ * is in an uncommitted transaction, rollback is called.
+ *
  * @param C A Connection object
  */
 void Connection_close(T C);
 
 
 /**
- * Start a transaction. 
+ * Start a transaction.
+ *
  * @param C A Connection object
  * @exception SQLException If a database error occurs
  * @see SQLException.h
@@ -244,9 +255,20 @@ void Connection_beginTransaction(T C);
 
 
 /**
+ * Return true if this Connection is in a transaction that has not
+ * been committed.
+ *
+ * @param C A Connection object
+ * @return true if this Connection is in a transaction otherwise false
+ */
+bool Connection_inTransaction(T C);
+
+
+/**
  * Makes all changes made since the previous commit/rollback permanent
  * and releases any database locks currently held by this Connection
  * object.
+ *
  * @param C A Connection object
  * @exception SQLException If a database error occurs
  * @see SQLException.h
@@ -259,6 +281,7 @@ void Connection_commit(T C);
  * database locks currently held by this Connection object. This method
  * will first call Connection_clear() before performing the rollback to
  * clear any statements in progress such as selects.
+ *
  * @param C A Connection object
  * @exception SQLException If a database error occurs
  * @see SQLException.h
@@ -267,8 +290,9 @@ void Connection_rollback(T C);
 
 
 /**
- * Returns the value for the most recent INSERT statement into a 
+ * Returns the value for the most recent INSERT statement into a
  * table with an AUTO_INCREMENT or INTEGER PRIMARY KEY column.
+ *
  * @param C A Connection object
  * @return The value of the rowid from the last insert statement
  */
@@ -276,10 +300,11 @@ long long Connection_lastRowId(T C);
 
 
 /**
- * Returns the number of rows that was inserted, deleted or modified
+ * Returns the number of rows that were inserted, deleted or modified
  * by the last Connection_execute() statement. If used with a
- * transaction, this method should be called <i>before</i> commit is
+ * transaction, this method should be called *before* commit is
  * executed, otherwise 0 is returned.
+ *
  * @param C A Connection object
  * @return The number of rows changed by the last (DIM) SQL statement
  */
@@ -290,12 +315,13 @@ long long Connection_rowsChanged(T C);
  * Executes the given SQL statement, which may be an INSERT, UPDATE,
  * or DELETE statement or an SQL statement that returns nothing, such
  * as an SQL DDL statement. Several SQL statements can be used in the
- * sql parameter string, each separated with the <i>;</i> SQL
- * statement separator character. <b>Note</b>, calling this method
+ * sql parameter string, each separated with the *;* SQL
+ * statement separator character. **Note**, calling this method
  * clears any previous ResultSets associated with the Connection.
+ *
  * @param C A Connection object
  * @param sql A SQL statement
- * @exception SQLException If a database error occurs. 
+ * @exception SQLException If a database error occurs.
  * @see SQLException.h
  */
 void Connection_execute(T C, const char *sql, ...) __attribute__((format (printf, 2, 3)));
@@ -303,20 +329,21 @@ void Connection_execute(T C, const char *sql, ...) __attribute__((format (printf
 
 /**
  * Executes the given SQL statement, which returns a single ResultSet
- * object. You may <b>only</b> use one SQL statement with this method.
+ * object. You may **only** use one SQL statement with this method.
  * This is different from the behavior of Connection_execute() which
  * executes all SQL statements in its input string. If the sql
  * parameter string contains more than one SQL statement, only the
  * first statement is executed, the others are silently ignored.
  * A ResultSet "lives" only until the next call to
- * Connection_executeQuery(), Connection_execute() or until the 
- * Connection is returned to the Connection Pool. <i>This means that 
- * Result Sets cannot be saved between queries</i>.
+ * Connection_executeQuery(), Connection_execute() or until the
+ * Connection is returned to the Connection Pool. *This means that
+ * Result Sets cannot be saved between queries*.
+ *
  * @param C A Connection object
  * @param sql A SQL statement
  * @return A ResultSet object that contains the data produced by the
- * given query. 
- * @exception SQLException If a database error occurs. 
+ * given query.
+ * @exception SQLException If a database error occurs.
  * @see ResultSet.h
  * @see SQLException.h
  */
@@ -324,21 +351,22 @@ ResultSet_T Connection_executeQuery(T C, const char *sql, ...) __attribute__((fo
 
 
 /**
- * Creates a PreparedStatement object for sending parameterized SQL 
- * statements to the database. The <code>sql</code> parameter may 
- * contain IN parameter placeholders. An IN placeholder is specified 
- * with a '?' character in the sql string. The placeholders are 
- * then replaced with actual values by using the PreparedStatement's 
- * setXXX methods. Only <i>one</i> SQL statement may be used in the sql 
- * parameter, this in difference to Connection_execute() which may 
- * take several statements. A PreparedStatement "lives" until the 
- * Connection is returned to the Connection Pool. 
+ * Creates a PreparedStatement object for sending parameterized SQL
+ * statements to the database. The `sql` parameter may
+ * contain IN parameter placeholders. An IN placeholder is specified
+ * with a '?' character in the sql string. The placeholders are
+ * then replaced with actual values by using the PreparedStatement's
+ * setXXX methods. Only *one* SQL statement may be used in the sql
+ * parameter, this in difference to Connection_execute() which may
+ * take several statements. A PreparedStatement "lives" until the
+ * Connection is returned to the Connection Pool.
+ *
  * @param C A Connection object
- * @param sql A single SQL statement that may contain one or more '?' 
+ * @param sql A single SQL statement that may contain one or more '?'
  * IN parameter placeholders
  * @return A new PreparedStatement object containing the pre-compiled
  * SQL statement.
- * @exception SQLException If a database error occurs. 
+ * @exception SQLException If a database error occurs.
  * @see PreparedStatement.h
  * @see SQLException.h
  */
@@ -350,22 +378,25 @@ PreparedStatement_T Connection_prepareStatement(T C, const char *sql, ...) __att
  * error that occurred. Inside a CATCH-block you can also find
  * the error message directly in the variable Exception_frame.message.
  * It is recommended to use this variable instead since it contains both
- * SQL errors and API errors such as parameter index out of range etc, 
+ * SQL errors and API errors such as parameter index out of range etc,
  * while Connection_getLastError() might only show SQL errors
+ *
  * @param C A Connection object
  * @return A string explaining the last error
  */
 const char *Connection_getLastError(T C);
 
+//@}
 
-/** @name Class methods */
+/** @name Class functions */
 //@{
 
 /**
- * <b>Class method</b>, test if the specified database system is 
- * supported by this library. Clients may pass a full Connection URL, 
+ * **Class method**, test if the specified database system is
+ * supported by this library. Clients may pass a full Connection URL,
  * for example using URL_toString(), or for convenience only the protocol
  * part of the URL. E.g. "mysql" or "sqlite".
+ *
  * @param url A database url string
  * @return true if supported otherwise false
  */
