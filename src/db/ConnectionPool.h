@@ -244,6 +244,7 @@ extern int ZBDEBUG;
  * Create a new ConnectionPool. The pool is created with a default of 5
  * initial connections. Maximum connections is set to 20. Property
  * methods in this interface can be used to change the default values.
+ *
  * @param url The database connection URL. It is a checked runtime error
  * for the url parameter to be NULL. The pool **does not** take ownership
  * of the `url` object but expects the url to exist as long as the pool does.
@@ -255,6 +256,7 @@ T ConnectionPool_new(URL_T url);
 
 /**
  * Disconnect and destroy the pool and release allocated resources.
+ *
  * @param P A ConnectionPool object reference
  */
 void ConnectionPool_free(T *P);
@@ -264,7 +266,8 @@ void ConnectionPool_free(T *P);
 
 /**
  * Returns this Connection Pool's URL
- * @param P A ConnectionPool object
+ * 
+ *@param P A ConnectionPool object
  * @return This Connection Pool's URL
  * @see URL.h
  */
@@ -273,6 +276,7 @@ URL_T ConnectionPool_getURL(T P);
 
 /**
  * Set the number of initial connections to start the pool with
+ *
  * @param P A ConnectionPool object
  * @param connections The number of initial pool connections
  * @see Connection.h
@@ -282,6 +286,7 @@ void ConnectionPool_setInitialConnections(T P, int connections);
 
 /**
  * Get the number of initial connections to start the pool with
+ *
  * @param P A ConnectionPool object
  * @return The number of initial pool connections
  * @see Connection.h
@@ -293,6 +298,7 @@ int ConnectionPool_getInitialConnections(T P);
  * Set the maximum number of connections this connection pool will
  * create. If max connections has been reached, ConnectionPool_getConnection()
  * will return NULL on the next call.
+ *
  * @param P A ConnectionPool object
  * @param maxConnections The maximum number of connections this
  * connection pool will create. It is a checked runtime error for
@@ -304,6 +310,7 @@ void ConnectionPool_setMaxConnections(T P, int maxConnections);
 
 /**
  * Get the maximum number of connections this Connection pool will create.
+ *
  * @param P A ConnectionPool object
  * @return The maximum number of connections this connection pool will create.
  * @see Connection.h
@@ -319,6 +326,7 @@ int ConnectionPool_getMaxConnections(T P);
  * 30 seconds. The reaper thread, if in use (see ConnectionPool_setReaper()),
  * uses this value when closing inactive Connections. It is a checked runtime
  * error for `connectionTimeout` to be less than or equal to zero.
+ *
  * @param P A ConnectionPool object
  * @param connectionTimeout The number of `seconds` a Connection
  * can be inactive (i.e., not in use) before the reaper closes the Connection.
@@ -329,6 +337,7 @@ void ConnectionPool_setConnectionTimeout(T P, int connectionTimeout);
 
 /**
  * Returns the connection timeout value in seconds.
+ *
  * @param P A ConnectionPool object
  * @return The time an inactive Connection may live before it is closed
  */
@@ -344,6 +353,7 @@ int ConnectionPool_getConnectionTimeout(T P);
  * method provides clients with a means to close down execution gracefully.
  * It is an unchecked runtime error to continue using the library after
  * the `abortHandler` was called.
+ *
  * @param P A ConnectionPool object
  * @param abortHandler The handler function to call should a fatal
  * error occur during processing. An explanatory error message is passed
@@ -365,6 +375,7 @@ void ConnectionPool_setAbortHandler(T P, void(*abortHandler)(const char *error))
  * use a reaper thread, remember to call this method **before**
  * ConnectionPool_start(). It is a checked runtime error for
  * `sweepInterval` to be less than or equal to zero.
+ *
  * @param P A ConnectionPool object
  * @param sweepInterval Number of `seconds` between sweeps of the
  * reaper thread (value > 0)
@@ -382,6 +393,7 @@ void ConnectionPool_setReaper(T P, int sweepInterval);
  * must be called before the pool is used and will connect to the database
  * server and create the initial connections for the pool. This method will
  * also start the reaper thread if specified via ConnectionPool_setReaper().
+ *
  * @param P A ConnectionPool object
  * @exception SQLException If a database error occurs.
  * @see SQLException.h
@@ -395,6 +407,7 @@ void ConnectionPool_start(T P);
  * of this component. Calling this method closes down all connections in the
  * pool, disconnects the pool from the database server, and stops the reaper
  * thread if it was started.
+ *
  * @param P A ConnectionPool object
  */
 void ConnectionPool_stop(T P);
@@ -402,22 +415,49 @@ void ConnectionPool_stop(T P);
 
 /**
  * Get a connection from the pool. The returned Connection (if any) is
- * guaranteed to be alive and connected to the database.
+ * guaranteed to be alive and connected to the database. NULL is returned
+ * if the pool is full and there are no available connections, if a
+ * database error occurred, or if the maximum number of retry attempts was reached.
+ *
+ * The method includes a retry mechanism to handle temporary connection failures,
+ * improving robustness in scenarios with network instability.
+ *
+ * This example can help to differentiate between a full pool (in which case
+ * increasing max connections can help) or a database error (in which case nothing
+ * will help. Get a coffee instead and call the DBA).
+ *
+ * ```
+ * Connection_T con = ConnectionPool_getConnection(p);
+ * if (!con) {
+ *      if (ConnectionPool_size(p) == ConnectionPool_active(p)) {
+ *          // Pool is full try increasing its max size
+ *          ConnectionPool_setMaxConnections(p,
+ *              ConnectionPool_getMaxConnections(p) + 5);
+ *          con = ConnectionPool_getConnection(p);
+ *          // Check if we got a connection
+ *      } else {
+ *          // A database error occurred or maximum retry attempts were reached
+ *          // This could be due to network issues or database unavailability
+ *      }
+ * }
+ * ```
+ *
  * @param P A ConnectionPool object
  * @return A connection from the pool or NULL if maxConnection has been
- * reached or if a database error occurred.
+ * reached, if a database error occurred, or if maximum retry attempts were exceeded.
  * @see Connection.h
+ * @see ConnectionPool_setMaxRetries(T P, int maxRetries)
  */
 Connection_T ConnectionPool_getConnection(T P);
-
 
 /**
  * Get a connection from the pool or throw an SQL Exception if a connection
  * cannot be obtained. The returned Connection is guaranteed to be
  * alive and connected to the database. The method ConnectionPool_getConnection()
  * above is identical except it will return NULL if the pool is full or
- * if a database error occurs. This method will instead throw an SQLException
+ * if a database error occured. This method will instead throw an SQLException
  * in both cases with an appropriate error message.
+ * 
  * @param P A ConnectionPool object
  * @return A connection from the pool
  * @exception SQLException If a database connection cannot be obtained. The
@@ -429,7 +469,8 @@ Connection_T ConnectionPool_getConnectionOrException(T P);
 
 /**
  * Returns a connection to the pool. This is the same as calling Connection_close()
- * @param P A ConnectionPool object
+ * 
+ *@param P A ConnectionPool object
  * @param connection A Connection object
  * @see Connection.h
  */
@@ -442,6 +483,7 @@ void ConnectionPool_returnConnection(T P, Connection_T connection);
  * `connectionTimeout` has expired *or* if the Connection
  * failed the ping test against the database. Active Connections are
  * *not* closed by this method.
+ *
  * @param P A ConnectionPool object
  * @return The number of Connections that were closed
  * @see ConnectionPool_setConnectionTimeout
@@ -454,6 +496,7 @@ int ConnectionPool_reapConnections(T P);
 /**
  * Returns the current number of connections in the pool. The number of
  * both active and inactive connections is returned.
+ *
  * @param P A ConnectionPool object
  * @return The number of connections in the pool
  */
@@ -463,6 +506,7 @@ int ConnectionPool_size(T P);
 /**
  * Returns the number of active connections in the pool, i.e., connections
  * in use by clients.
+ *
  * @param P A ConnectionPool object
  * @return The number of active connections in the pool
  */
@@ -475,6 +519,7 @@ int ConnectionPool_active(T P);
 
 /**
  * **Class method**, returns this library's version information
+ *
  * @return Library version information
  */
 const char *ConnectionPool_version(void);
