@@ -37,7 +37,7 @@
  */
 
 
-/** @name Class methods */
+/** @name Class functions */
 //@{
 
 

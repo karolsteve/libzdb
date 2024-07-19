@@ -32,79 +32,97 @@
 
 
 /**
- * A <b>PreparedStatement</b> represent a single SQL statement pre-compiled 
- * into byte code for later execution. The SQL statement may contain 
- * <i>in</i> parameters of the form "?". Such parameters represent 
- * unspecified literal values (or "wildcards") to be filled in later by the 
- * various setter methods defined in this interface. Each <i>in</i> parameter has an
- * associated index number which is its sequence in the statement. The first 
- * <i>in</i> '?' parameter has index 1, the next has index 2 and so on. A 
+ * A **PreparedStatement** represents a single SQL statement pre-compiled
+ * into byte code for later execution. The SQL statement may contain
+ * *in* parameters of the form "?". Such parameters represent
+ * unspecified literal values (or "wildcards") to be filled in later by the
+ * various setter methods defined in this interface. Each *in* parameter has an
+ * associated index number which is its sequence in the statement. The first
+ * *in* '?' parameter has index 1, the next has index 2 and so on. A
  * PreparedStatement is created by calling Connection_prepareStatement().
- * 
- * Consider this statement: 
- * <pre>
- *  INSERT INTO employee(name, picture) VALUES(?, ?)
- * </pre>
- * There are two <i>in</i> parameters in this statement, the parameter for setting
- * the name has index 1 and the one for the picture has index 2. To set the 
- * values for the <i>in</i> parameters we use a setter method. Assuming name has
- * a string value we use PreparedStatement_setString(). To set the value
- * of the picture we submit a binary value using the 
- * method PreparedStatement_setBlob(). 
  *
- * String and blob parameter values are set by reference and <b>must</b> not
- * "disappear" before either PreparedStatement_execute()
- * or PreparedStatement_executeQuery() is called. 
- * 
- * <h2 class="desc">Example:</h2>
- * To summarize, here is the code in context. 
- * <pre>
- * PreparedStatement_T p = Connection_prepareStatement(con, "INSERT INTO employee(name, picture) VALUES(?, ?)");
+ * Consider this statement:
+ * ```sql
+ * INSERT INTO employee(name, photo) VALUES(?, ?)
+ * ```
+ * There are two *in* parameters in this statement, the parameter for setting
+ * the name has index 1 and the one for the photo has index 2. To set the
+ * values for the *in* parameters we use a setter method. Assuming name has
+ * a string value we use PreparedStatement_setString(). To set the value
+ * of the photo we submit a binary value using the
+ * method PreparedStatement_setBlob().
+ *
+ * ## Example
+ *
+ * To summarize, here is the code in context.
+ *
+ * ```c
+ * PreparedStatement_T p = Connection_prepareStatement(con, "INSERT INTO employee(name, photo) VALUES(?, ?)");
  * PreparedStatement_setString(p, 1, "Kamiya Kaoru");
  * PreparedStatement_setBlob(p, 2, jpeg, jpeg_size);
  * PreparedStatement_execute(p);
- * </pre>
- * <h2 class="desc">Reuse:</h2>
- * A PreparedStatement can be reused. That is, the method 
- * PreparedStatement_execute() can be called one or more times to execute 
- * the same statement. Clients can also set new <i>in</i> parameter values and
+ * ```
+ *
+ * ## Reuse
+ *
+ * A PreparedStatement can be reused. That is, the method
+ * PreparedStatement_execute() can be called one or more times to execute
+ * the same statement. Clients can also set new *in* parameter values and
  * re-execute the statement as shown in this example:
- * <pre>
- * PreparedStatement_T p = Connection_prepareStatement(con, "INSERT INTO employee(name, picture) VALUES(?, ?)");
+ *
+ * ```c
+ * PreparedStatement_T p = Connection_prepareStatement(con, "INSERT INTO employee(name, photo) VALUES(?, ?)");
  * for (int i = 0; employees[i]; i++)
  * {
  *        PreparedStatement_setString(p, 1, employees[i].name);
- *        PreparedStatement_setBlob(p, 2, employees[i].picture, employees[i].picture_size);
+ *        PreparedStatement_setBlob(p, 2, employees[i].photo.data, employees[i].photo.size);
  *        PreparedStatement_execute(p);
  * }
- * </pre>
- * <h2 class="desc">Result Sets:</h2>
+ * ```
+ *
+ * ## Result Sets
+ *
  * Here is another example where we use a Prepared Statement to execute a query
  * which returns a Result Set:
- * 
- * <pre>
- * PreparedStatement_T p = Connection_prepareStatement(con, "SELECT id FROM employee WHERE name LIKE ?"); 
+ *
+ * ```c
+ * PreparedStatement_T p = Connection_prepareStatement(con, "SELECT id FROM employee WHERE name LIKE ?");
  * PreparedStatement_setString(p, 1, "%oru%");
  * ResultSet_T r = PreparedStatement_executeQuery(p);
  * while (ResultSet_next(r))
  *        printf("employee.id = %d\n", ResultSet_getInt(r, 1));
- * </pre>
- * 
+ * ```
+ *
  * A ResultSet returned from PreparedStatement_executeQuery() "lives" until
  * the Prepared Statement is executed again or until the Connection is
- * returned to the Connection Pool. 
+ * returned to the Connection Pool.
  *
- * <h2 class="desc">Date and Time</h2>
+ * ## Date and Time
+ *
  * PreparedStatement provides PreparedStatement_setTimestamp() for setting a
  * Unix timestamp value. To set SQL Date, Time or DateTime values, simply use
  * PreparedStatement_setString() with a time string format understood by your
  * database. For instance to set a SQL Date value,
- * <pre>
- *   PreparedStatement_setString(p, parameterIndex, "2019-12-28");
- * </pre>
+ * ```c
+ * PreparedStatement_setString(p, parameterIndex, "2019-12-28");
+ * ```
  *
- * <i>A PreparedStatement is reentrant, but not thread-safe and should only be used by one thread (at the time).</i>
- * 
+ * ## SQL Injection Prevention
+ *
+ * Prepared Statement is particularly useful when dealing with user-submitted data, 
+ * as properly used Prepared Statements provide strong protection against SQL
+ * injection attacks. By separating SQL logic from data, PreparedStatements ensure
+ * that user input is treated as data only, not as part of the SQL command.
+ *
+ * *A PreparedStatement is reentrant, but not thread-safe and should only be used
+ * by one thread (at a time).*
+ *
+ * @note Remember that parameter indices in PreparedStatement are 1-based, not 0-based.
+ *
+ * @note To minimizes memory allocation and avoid unnecessary data copying, string
+ * and blob values are set by reference and MUST remain valid until either
+ * PreparedStatement_execute() or PreparedStatement_executeQuery() is called.
+ *
  * @see Connection.h ResultSet.h SQLException.h
  * @file
  */
@@ -136,27 +154,27 @@ void PreparedStatement_free(T *P) __attribute__ ((visibility("hidden")));
 //@{
 
 /**
- * Sets the <i>in</i> parameter at index <code>parameterIndex</code> to the 
- * given string value. 
+ * Sets the *in* parameter at index `parameterIndex` to the
+ * given string value.
  * @param P A PreparedStatement object
  * @param parameterIndex The first parameter is 1, the second is 2,..
  * @param x The string value to set. Must be a NUL terminated string. NULL
- * is allowed to indicate a SQL NULL value. 
- * @exception SQLException If a database access error occurs or if parameter 
+ * is allowed to indicate a SQL NULL value.
+ * @exception SQLException If a database access error occurs or if parameter
  * index is out of range
  * @see SQLException.h
-*/
+ */
 void PreparedStatement_setString(T P, int parameterIndex, const char *x);
 
 
 /**
- * Sets the <i>in</i> parameter at index <code>parameterIndex</code> to the
- * given int value. 
- * In general, on both 32 and 64 bits architecture, <code>int</code> is 4 bytes
- * or 32 bits and <code>long long</code> is 8 bytes or 64 bits. A
- * <code>long</code> type is usually equal to <code>int</code> on 32 bits
- * architecture and equal to <code>long long</code> on 64 bits architecture.
- * However, the width of integer types are architecture and compiler dependent.
+ * Sets the *in* parameter at index `parameterIndex` to the
+ * given int value.
+ * In general, on both 32 and 64 bit architectures, `int` is 4 bytes
+ * or 32 bits and `long long` is 8 bytes or 64 bits. A
+ * `long` type is usually equal to `int` on 32 bit
+ * architecture and equal to `long long` on 64 bit architecture.
+ * However, the width of integer types is architecture and compiler dependent.
  * The above is usually true, but not necessarily.
  * @param P A PreparedStatement object
  * @param parameterIndex The first parameter is 1, the second is 2,..
@@ -169,18 +187,18 @@ void PreparedStatement_setInt(T P, int parameterIndex, int x);
 
 
 /**
- * Sets the <i>in</i> parameter at index <code>parameterIndex</code> to the 
- * given long long value. 
- * In general, on both 32 and 64 bits architecture, <code>int</code> is 4 bytes
- * or 32 bits and <code>long long</code> is 8 bytes or 64 bits. A
- * <code>long</code> type is usually equal to <code>int</code> on 32 bits
- * architecture and equal to <code>long long</code> on 64 bits architecture.
- * However, the width of integer types are architecture and compiler dependent.
+ * Sets the *in* parameter at index `parameterIndex` to the
+ * given long long value.
+ * In general, on both 32 and 64 bit architectures, `int` is 4 bytes
+ * or 32 bits and `long long` is 8 bytes or 64 bits. A
+ * `long` type is usually equal to `int` on 32 bit
+ * architecture and equal to `long long` on 64 bit architecture.
+ * However, the width of integer types is architecture and compiler dependent.
  * The above is usually true, but not necessarily.
  * @param P A PreparedStatement object
  * @param parameterIndex The first parameter is 1, the second is 2,..
  * @param x The long long value to set
- * @exception SQLException If a database access error occurs or if parameter 
+ * @exception SQLException If a database access error occurs or if parameter
  * index is out of range
  * @see SQLException.h
  */
@@ -188,12 +206,12 @@ void PreparedStatement_setLLong(T P, int parameterIndex, long long x);
 
 
 /**
- * Sets the <i>in</i> parameter at index <code>parameterIndex</code> to the 
- * given double value. 
+ * Sets the *in* parameter at index `parameterIndex` to the
+ * given double value.
  * @param P A PreparedStatement object
  * @param parameterIndex The first parameter is 1, the second is 2,..
  * @param x The double value to set
- * @exception SQLException If a database access error occurs or if parameter 
+ * @exception SQLException If a database access error occurs or if parameter
  * index is out of range
  * @see SQLException.h
  */
@@ -201,13 +219,13 @@ void PreparedStatement_setDouble(T P, int parameterIndex, double x);
 
 
 /**
- * Sets the <i>in</i> parameter at index <code>parameterIndex</code> to the 
- * given blob value. 
+ * Sets the *in* parameter at index `parameterIndex` to the
+ * given blob value.
  * @param P A PreparedStatement object
  * @param parameterIndex The first parameter is 1, the second is 2,..
  * @param x The blob value to set
- * @param size The number of bytes in the blob 
- * @exception SQLException If a database access error occurs or if parameter 
+ * @param size The number of bytes in the blob
+ * @exception SQLException If a database access error occurs or if parameter
  * index is out of range
  * @see SQLException.h
  */
@@ -215,13 +233,13 @@ void PreparedStatement_setBlob(T P, int parameterIndex, const void *x, int size)
 
 
 /**
- * Sets the <i>in</i> parameter at index <code>parameterIndex</code> to the
- * given Unix timestamp value. The timestamp value given in <code>x</code>
+ * Sets the *in* parameter at index `parameterIndex` to the
+ * given Unix timestamp value. The timestamp value given in `x`
  * is expected to be in the GMT timezone. For instance, a value returned by
  * time(3) which represents the system's notion of the current Greenwich time.
- * <i class="textinfo">SQLite</i> does not have temporal SQL data types per se
- * and using this method with SQLite will store the timestamp value as a 
- * numerical type, as-is. This is usually what you want; it is fast, compact 
+ * *SQLite* does not have temporal SQL data types per se
+ * and using this method with SQLite will store the timestamp value as a
+ * numerical type, as-is. This is usually what you want; it is fast, compact
  * and unambiguous.
  * @param P A PreparedStatement object
  * @param parameterIndex The first parameter is 1, the second is 2,..
@@ -234,7 +252,7 @@ void PreparedStatement_setTimestamp(T P, int parameterIndex, time_t x);
 
 
 /**
- * Sets the <i>in</i> parameter at index <code>parameterIndex</code> to
+ * Sets the *in* parameter at index `parameterIndex` to
  * SQL NULL.
  * @param P A PreparedStatement object
  * @param parameterIndex The first parameter is 1, the second is 2,..
@@ -244,13 +262,15 @@ void PreparedStatement_setTimestamp(T P, int parameterIndex, time_t x);
  */
 void PreparedStatement_setNull(T P, int parameterIndex);
 
-
 //@}
+
+/** @name Functions */
+//@{
 
 /**
  * Executes the prepared SQL statement, which may be an INSERT, UPDATE,
  * or DELETE statement or an SQL statement that returns nothing, such
- * as an SQL DDL statement. 
+ * as an SQL DDL statement.
  * @param P A PreparedStatement object
  * @exception SQLException If a database error occurs
  * @see SQLException.h
@@ -260,9 +280,9 @@ void PreparedStatement_execute(T P);
 
 /**
  * Executes the prepared SQL statement, which returns a single ResultSet
- * object. A ResultSet "lives" only until the next call to a PreparedStatement 
- * method or until the Connection is returned to the Connection Pool. 
- * <i>This means that Result Sets cannot be saved between queries</i>.
+ * object. A ResultSet "lives" only until the next call to a PreparedStatement
+ * method or until the Connection is returned to the Connection Pool.
+ * *This means that Result Sets cannot be saved between queries*.
  * @param P A PreparedStatement object
  * @return A ResultSet object that contains the data produced by the prepared
  * statement.
@@ -276,13 +296,14 @@ ResultSet_T PreparedStatement_executeQuery(T P);
 /**
  * Returns the number of rows that was inserted, deleted or modified by the
  * most recently completed SQL statement on the database connection. If used
- * with a transaction, this method should be called <i>before</i> commit is
+ * with a transaction, this method should be called *before* commit is
  * executed, otherwise 0 is returned.
  * @param P A PreparedStatement object
  * @return The number of rows changed by the last (DIM) SQL statement
  */
 long long PreparedStatement_rowsChanged(T P);
 
+//@}
 
 /** @name Properties */
 //@{
@@ -295,6 +316,5 @@ long long PreparedStatement_rowsChanged(T P);
 int PreparedStatement_getParameterCount(T P);
 
 //@}
-
 #undef T
 #endif
