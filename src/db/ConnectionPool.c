@@ -106,36 +106,63 @@ static bool _fillPool(T P) {
 static Connection_T _getConnectionWithError(T P, char error[static STRLEN]) {
         Connection_T con = NULL;
         *error = 0;
+        /*
+         * 0. Invariant: We guarantee that a Connection returned passes the ping test, i.e.
+         *    it is connected to the database.
+         * 1. The pool size is clamped by P->maxConnections, giving us a finite set of connections.
+         * 2. Each retry either finds an available connection or creates a new one if possible.
+         * 3. If Connection_ping() fails, the following scenarios may occur:
+         *    a) We may mark all existing connections in the pool as unavailable, or
+         *    b) We may reach P->maxConnections and be unable to create new ones.
+         *    c) Most likely, if ping fails, attempts to create a new connection will also fail
+         *       (e.g., if the database server is down), causing an immediate return with an error.
+         * 4. In any case, if we can't get a valid connection, con will be NULL, causing the function
+         *    to return NULL with an error.
+         *
+         * In the worst-case scenario (barring immediate failure), we might try each connection
+         * in a full pool once before returning. However, in practice, a persistent connection
+         * failure will likely lead to a much earlier return due to failed connection creation.
+         */
+retry:
         LOCK(P->mutex)
         {
                 int size = Vector_size(P->pool);
                 for (int i = 0; i < size; i++) {
                         con = Vector_get(P->pool, i);
                         if (Connection_isAvailable(con)) {
-                                if (Connection_ping(con)) {
-                                        Connection_setAvailable(con, false);
-                                        goto done;
-                                }
-                        }
-                }
-                con = NULL;
-                if (size < P->maxConnections) {
-                        con = Connection_new(P, &P->error);
-                        if (con) {
                                 Connection_setAvailable(con, false);
-                                Vector_push(P->pool, con);
-                        } else {
-                                snprintf(error, STRLEN - 1, "Failed to create a connection -- %s",
-                                         STR_UNDEF(P->error) ? "unknown error" : P->error);
-                                FREE(P->error);
+                                break;
                         }
-                } else {
-                        snprintf(error, STRLEN - 1, "Failed to create a connection -- max connections reached");
+                        con = NULL;
+                }
+                if (!con) {
+                        if (size < P->maxConnections) {
+                                con = Connection_new(P, &P->error);
+                                if (con) {
+                                        Connection_setAvailable(con, false);
+                                        Vector_push(P->pool, con);
+                                } else {
+                                        snprintf(error, STRLEN, "Failed to create a connection -- %s",
+                                                 STR_DEF(P->error) ? P->error : "unknown error");
+                                        FREE(P->error);
+                                }
+                        } else {
+                                snprintf(error, STRLEN, "Failed to create a connection -- max connections reached");
+                        }
                 }
         }
-done:
         END_LOCK;
-        if (!con) {
+        if (con) {
+                if (!Connection_ping(con)) {
+                        LOCK(P->mutex)
+                        {
+                                Vector_remove(P->pool, Vector_indexOf(P->pool, con));
+                        }
+                        END_LOCK;
+                        Connection_free(&con);
+                        goto retry;
+                }
+        } else {
                 DEBUG("%s\n", error);
         }
         return con;
@@ -293,24 +320,6 @@ void ConnectionPool_setReaper(T P, int sweepInterval) {
 }
 
 
-int ConnectionPool_size(T P) {
-        assert(P);
-        return Vector_size(P->pool);
-}
-
-
-int ConnectionPool_active(T P) {
-        int n = 0;
-        assert(P);
-        LOCK(P->mutex)
-        {
-                n = _getActive(P);
-        }
-        END_LOCK;
-        return n;
-}
-
-
 /* -------------------------------------------------------- Public methods */
 
 
@@ -376,7 +385,7 @@ Connection_T ConnectionPool_getConnectionOrException(T P) {
 void ConnectionPool_returnConnection(T P, Connection_T connection) {
 	assert(P);
         assert(connection);
-	if (Connection_isInTransaction(connection)) {
+	if (Connection_inTransaction(connection)) {
                 TRY
                         Connection_rollback(connection);
                 ELSE
@@ -402,6 +411,27 @@ int ConnectionPool_reapConnections(T P) {
         END_LOCK;
         return n;
 }
+
+
+int ConnectionPool_size(T P) {
+        assert(P);
+        return Vector_size(P->pool);
+}
+
+
+int ConnectionPool_active(T P) {
+        int n = 0;
+        assert(P);
+        LOCK(P->mutex)
+        {
+                n = _getActive(P);
+        }
+        END_LOCK;
+        return n;
+}
+
+
+/* --------------------------------------------------------- Class methods */
 
 
 const char *ConnectionPool_version(void) {
