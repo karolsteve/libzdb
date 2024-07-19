@@ -176,7 +176,7 @@ static Connection_T _getConnection(T P, char error[static STRLEN]) {
 }
 
 
-static int _getActive(T P){
+static int _active(T P){
         int i, n = 0, size = Vector_size(P->pool);
         for (i = 0; i < size; i++)
                 if (! Connection_isAvailable(Vector_get(P->pool, i))) n++;
@@ -186,7 +186,7 @@ static int _getActive(T P){
 
 static int _reapConnections(T P) {
         int n = 0;
-        int x = Vector_size(P->pool) - _getActive(P) - P->initialConnections;
+        int x = Vector_size(P->pool) - _active(P) - P->initialConnections;
         time_t timedout = Time_now() - P->connectionTimeout;
         for (int i = 0; ((n < x) && (i < Vector_size(P->pool))); i++) {
                 Connection_T con = Vector_get(P->pool, i);
@@ -421,9 +421,19 @@ int ConnectionPool_active(T P) {
         int n = 0;
         assert(P);
         Mutex_lock(P->mutex);
-                n = _getActive(P);
+                n = _active(P);
         Mutex_unlock(P->mutex);
         return n;
+}
+
+
+bool ConnectionPool_isFull(T P) {
+        assert(P);
+        bool full = false;
+        Mutex_lock(P->mutex);
+                full = Vector_size(P->pool) >= P->maxConnections;
+        Mutex_unlock(P->mutex);
+        return full;
 }
 
 

@@ -346,9 +346,12 @@ static void testPool(const char *testURL) {
                         Connection_T con = ConnectionPool_getConnection(pool);
                         assert(con);
                         Vector_push(v, con);
+                        if (i < 19)
+                                assert(!ConnectionPool_isFull(pool));
                 }
                 assert(ConnectionPool_size(pool) == 20);
                 assert(ConnectionPool_active(pool) == 20);
+                assert(ConnectionPool_isFull(pool));
                 printf("success\n");
                 printf("Closing Connections down to initial..");
                 while (! Vector_isEmpty(v))

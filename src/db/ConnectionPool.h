@@ -429,8 +429,8 @@ void ConnectionPool_stop(T P);
  * ```
  * Connection_T con = ConnectionPool_getConnection(p);
  * if (!con) {
- *      if (ConnectionPool_size(p) == ConnectionPool_active(p)) {
- *          // Pool is full try increasing its max size
+ *      if (ConnectionPool_isFull(p)) {
+ *          // Try increasing its max size
  *          ConnectionPool_setMaxConnections(p,
  *              ConnectionPool_getMaxConnections(p) + 5);
  *          con = ConnectionPool_getConnection(p);
@@ -511,6 +511,17 @@ int ConnectionPool_size(T P);
  * @return The number of active connections in the pool
  */
 int ConnectionPool_active(T P);
+
+
+/**
+ * Returns true if the pool is full. I.e. if the number of _active_
+ * connections in the pool is greater than or equal to max connections
+ *
+ * @param P A ConnectionPool object
+ * @return True if pool is full
+ */
+bool ConnectionPool_isFull(T P);
+
 
 // @}
 
