@@ -171,6 +171,7 @@
  * can be set for an oracle connection URL.
  *
  * ## Example:
+ *
  * To obtain a connection pool for a MySQL database, the code below can be
  * used. The exact same code can be used for PostgreSQL, SQLite and Oracle,
  * the only change needed is to modify the Connection URL. Here we connect
@@ -199,29 +200,43 @@
  * @endcode
  *
  * ## Optimizing the pool size:
+ *
  * The pool can be set up to dynamically change the number of active
- * Connections in the pool depending on the load. A single `reaper`
- * thread can be activated at startup to sweep through the pool at regular
- * intervals and close Connections that have been inactive for a specified time
- * or for some reason no longer respond. Only inactive Connections will be closed,
- * and no more than the initial number of Connections the pool was started with
- * are closed. The property method, ConnectionPool_setReaper(), is used to specify
- * that a reaper thread should be started when the pool is started. This method
- * **must** be called *before* ConnectionPool_start(); otherwise,
- * the pool will not start with a reaper thread.
+ * connections in the pool depending on the load. A single `reaper`
+ * thread can be activated at startup to perform two critical functions:
+ *
+ * 1. Sweep through the pool at regular intervals and close connections
+ *    that have been inactive for a specified time (default 60 seconds).
+ * 2. Perform periodic validation (ping test) on idle connections to
+ *    ensure they remain valid and responsive.
+ *
+ * This dual functionality helps maintain the pool's health by removing
+ * stale connections and verifying the validity of idle ones, which is
+ * particularly important for reducing load on the database and ensuring
+ * connection reliability.
+ *
+ * Only inactive connections will be closed, and no more than the initial
+ * number of connections the pool was started with are closed. The property
+ * method, ConnectionPool_setReaper(), is used to specify that a reaper
+ * thread should be started when the pool is started. This method *must*
+ * be called before ConnectionPool_start(); otherwise, the pool will not
+ * start with a reaper thread.
  *
  * Clients can also call the method ConnectionPool_reapConnections() to
  * prune the pool directly if the reaper thread is not activated.
  *
- * It is recommended to start the pool with a reaper thread, especially if
- * the pool maintains TCP/IP Connections.
+ * It is strongly recommended to start the pool with a reaper thread,
+ * especially if the pool maintains TCP/IP Connections, as it ensures
+ * both efficient resource management and continuous connection validity.
  *
  * ## Realtime inspection:
- * Two methods can be used to inspect the pool at runtime. The method
+ *
+ * Three methods can be used to inspect the pool at runtime. The method
  * ConnectionPool_size() returns the number of connections in the pool, that is,
  * both active and inactive connections. The method ConnectionPool_active()
  * returns the number of active connections, i.e., those connections in
- * current use by your application.
+ * current use by your application. The method ConnectionPool_isFull() can be
+ * used to check if the pool is full and no longer can return a new connection.
  *
  * *This ConnectionPool is thread-safe.*
  *
@@ -323,7 +338,7 @@ int ConnectionPool_getMaxConnections(T P);
  * ConnectionPool_reapConnections(), if called, will close inactive
  * Connections in the pool which have not been in use for
  * `connectionTimeout` seconds. The default connectionTimeout is
- * 30 seconds. The reaper thread, if in use (see ConnectionPool_setReaper()),
+ * 60 seconds. The reaper thread, if in use (see ConnectionPool_setReaper()),
  * uses this value when closing inactive Connections. It is a checked runtime
  * error for `connectionTimeout` to be less than or equal to zero.
  *
