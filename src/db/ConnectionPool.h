@@ -416,15 +416,12 @@ void ConnectionPool_stop(T P);
 /**
  * Get a connection from the pool. The returned Connection (if any) is
  * guaranteed to be alive and connected to the database. NULL is returned
- * if the pool is full and there are no available connections, if a
- * database error occurred, or if the maximum number of retry attempts was reached.
- *
- * The method includes a retry mechanism to handle temporary connection failures,
- * improving robustness in scenarios with network instability.
+ * if the pool is full and there are no available connections or if a
+ * database error occurred.
  *
  * This example can help to differentiate between a full pool (in which case
  * increasing max connections can help) or a database error (in which case nothing
- * will help. Get a coffee instead and call the DBA).
+ * will help, except calling the DBA).
  *
  * ```
  * Connection_T con = ConnectionPool_getConnection(p);
@@ -436,8 +433,8 @@ void ConnectionPool_stop(T P);
  *          con = ConnectionPool_getConnection(p);
  *          // Check if we got a connection
  *      } else {
- *          // A database error occurred or maximum retry attempts were reached
- *          // This could be due to network issues or database unavailability
+ *          // A database error occurred. This could be due
+ *          // to network issues or database unavailability
  *      }
  * }
  * ```
@@ -514,11 +511,13 @@ int ConnectionPool_active(T P);
 
 
 /**
- * Returns true if the pool is full. I.e. if the number of _active_
- * connections in the pool is greater than or equal to max connections
+ * Returns true if the pool is full. I.e., if the number of *active*
+ * connections in the pool is equal to max connections.
+ * You can use this method when ConnectionPool_getConnection() returns NULL to
+ * determine if the cause is a full pool or a database error.
  *
  * @param P A ConnectionPool object
- * @return True if pool is full
+ * @return true if pool is full, false otherwise
  */
 bool ConnectionPool_isFull(T P);
 
