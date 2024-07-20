@@ -103,10 +103,23 @@ static bool _fillPool(T P) {
 }
 
 
-static inline Connection_T _findConnection(T P, int *size) {
+static void _mapActive(const void *con, void *ap) {
+        int *active = ap;
+        if (!Connection_isAvailable((Connection_T)con)) *active += 1;
+}
+
+
+static int _active(T P) {
+        int active = 0;
+        Vector_map(P->pool, _mapActive, &active);
+        return active;
+}
+
+
+static inline Connection_T _getAvailableConnection(T P) {
         Connection_T con = NULL;
-        *size = Vector_size(P->pool);
-        for (int i = 0; i < *size; i++) {
+        int size = Vector_size(P->pool);
+        for (int i = 0; i < size; i++) {
                 con = Vector_get(P->pool, i);
                 if (Connection_isAvailable(con)) {
                         Connection_setAvailable(con, false);
@@ -137,50 +150,55 @@ static inline Connection_T _createConnection(T P, char error[static STRLEN]) {
 
 static Connection_T _getConnection(T P, char error[static STRLEN]) {
         Connection_T con = NULL;
-        int retries = 0;
-        const int maxRetries = 10;
         int size = 0;
+        int activeConnections = 0;
+        int availableConnections = 0;
         *error = 0;
-        while (retries < maxRetries) {
-                Mutex_lock(P->mutex);
-                        con = _findConnection(P, &size);
-                Mutex_unlock(P->mutex);
-                
-                if (!con) {
-                        if (size < P->maxConnections) {
-                                con = _createConnection(P, error);
-                                if (con) return con;
-                                else return NULL;  // Don't retry on connection creation failure
-                        } else {
-                                snprintf(error, STRLEN, "Failed to create a connection -- max connections reached");
-                                return NULL;
-                        }
-                } else {
-                        // Invariant: A pool connection must pass the ping-test
-                        if (Connection_ping(con)) {
-                                return con;
-                        } else {
-                                Mutex_lock(P->mutex);
-                                        Vector_remove(P->pool, Vector_indexOf(P->pool, con));
-                                Mutex_unlock(P->mutex);
-                                Connection_free(&con);
-                        }
-                }
-                retries++;
+        LOCK(P->mutex)
+        {
+                size = Vector_size(P->pool);
+                activeConnections = _active(P);
+                availableConnections = size - activeConnections;
         }
-        if (retries == maxRetries) {
-                snprintf(error, STRLEN, "Failed to get a connection that passed the ping test after %d attempts", maxRetries);
+        END_LOCK;
+        while (availableConnections > 0) {
+                LOCK(P->mutex)
+                {
+                        con = _getAvailableConnection(P);
+                }
+                END_LOCK;
+                if (!con) {
+                        // No more available connections, break to try creation
+                        break;
+                }
+                if (Connection_ping(con)) {
+                        return con;
+                } else {
+                        // Connection failed ping test, remove it and continue
+                        LOCK(P->mutex)
+                        {
+                                Vector_remove(P->pool, Vector_indexOf(P->pool, con));
+                                size = Vector_size(P->pool);
+                                availableConnections--;
+                        }
+                        END_LOCK;
+                        Connection_free(&con);
+                }
+        }
+        // If we're here, either all available connections failed or there were none
+        // Try to create a new connection if the pool isn't full
+        // Note: We're aware that 'size' might not reflect the current pool size due to
+        // concurrent modifications. We accept the risk of potential temporary over-allocation
+        // to prioritize getting a creation error if the database is down. This trade-off
+        // ensures we can distinguish between a full pool and database connection issues.
+        if (size < P->maxConnections) {
+                con = _createConnection(P, error);
+                if (con) return con;
+        } else {
+                snprintf(error, STRLEN, "Failed to get a connection -- pool is full (max connections reached)");
         }
         DEBUG("%s\n", error);
         return NULL;
-}
-
-
-static int _active(T P){
-        int i, n = 0, size = Vector_size(P->pool);
-        for (i = 0; i < size; i++)
-                if (! Connection_isAvailable(Vector_get(P->pool, i))) n++;
-        return n;
 }
 
 
@@ -264,9 +282,11 @@ URL_T ConnectionPool_getURL(T P) {
 void ConnectionPool_setInitialConnections(T P, int connections) {
         assert(P);
         assert(connections >= 0);
-        Mutex_lock(P->mutex);
+        LOCK(P->mutex)
+        {
                 P->initialConnections = connections;
-        Mutex_unlock(P->mutex);
+        }
+        END_LOCK;
 }
 
 
@@ -279,9 +299,11 @@ int ConnectionPool_getInitialConnections(T P) {
 void ConnectionPool_setMaxConnections(T P, int maxConnections) {
         assert(P);
         assert(P->initialConnections <= maxConnections);
-        Mutex_lock(P->mutex);
+        LOCK(P->mutex)
+        {
                 P->maxConnections = maxConnections;
-        Mutex_unlock(P->mutex);
+        }
+        END_LOCK;
 }
 
 
@@ -395,18 +417,22 @@ void ConnectionPool_returnConnection(T P, Connection_T connection) {
                 END_TRY;
         }
         Connection_clear(connection);
-        Mutex_lock(P->mutex);
+        LOCK(P->mutex)
+        {
                 Connection_setAvailable(connection, true);
-        Mutex_unlock(P->mutex);
+        }
+        END_LOCK;
 }
 
 
 int ConnectionPool_reapConnections(T P) {
         int n = 0;
         assert(P);
-        Mutex_lock(P->mutex);
+        LOCK(P->mutex)
+        {
                 n = _reapConnections(P);
-        Mutex_unlock(P->mutex);
+        }
+        END_LOCK;
         return n;
 }
 
@@ -418,11 +444,13 @@ int ConnectionPool_size(T P) {
 
 
 int ConnectionPool_active(T P) {
-        int n = 0;
         assert(P);
-        Mutex_lock(P->mutex);
-                n = _active(P);
-        Mutex_unlock(P->mutex);
+        int n = 0;
+        LOCK(P->mutex)
+        {
+                Vector_map(P->pool, _mapActive, &n);
+        }
+        END_LOCK;
         return n;
 }
 
@@ -430,9 +458,11 @@ int ConnectionPool_active(T P) {
 bool ConnectionPool_isFull(T P) {
         assert(P);
         bool full = false;
-        Mutex_lock(P->mutex);
-                full = Vector_size(P->pool) >= P->maxConnections;
-        Mutex_unlock(P->mutex);
+        LOCK(P->mutex)
+        {
+                full = (_active(P) >= P->maxConnections);
+        }
+        END_LOCK;
         return full;
 }
 
