@@ -336,8 +336,8 @@ static void testPool(const char *testURL) {
                 assert(pool);
                 ConnectionPool_setInitialConnections(pool, 4);
                 ConnectionPool_setMaxConnections(pool, 20);
-                ConnectionPool_setConnectionTimeout(pool, 4);
-                ConnectionPool_setReaper(pool, 4);
+                ConnectionPool_setConnectionTimeout(pool, 2);
+                ConnectionPool_setReaper(pool, 2);
                 ConnectionPool_setAbortHandler(pool, TabortHandler);
                 ConnectionPool_start(pool);
                 assert(4==ConnectionPool_size(pool));
@@ -359,14 +359,16 @@ static void testPool(const char *testURL) {
                 assert(ConnectionPool_active(pool) == 0);
                 assert(ConnectionPool_size(pool) == 20);
                 printf("success\n");
-                printf("Please wait 10 sec for reaper to harvest closed connections..");
+                printf("Please wait 5 sec for reaper to harvest closed connections..");
                 Connection_T con = ConnectionPool_getConnection(pool); // Activate one connection to verify the reaper does not close any active
                 fflush(stdout);
-                sleep(10);
+                sleep(5);
                 assert(5 == ConnectionPool_size(pool)); // 4 initial connections + the one active we got above
                 assert(1 == ConnectionPool_active(pool));
+                assert(!ConnectionPool_isFull(pool));
                 printf("success\n");
                 Connection_close(con);
+                assert(0 == ConnectionPool_active(pool));
                 ConnectionPool_stop(pool);
                 ConnectionPool_free(&pool);
                 Vector_free(&v);
