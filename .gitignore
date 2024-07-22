@@ -11,6 +11,7 @@ xcshareddata/
 *.lo
 oci
 
+src/zdb.h
 .libs/
 aclocal.m4
 autom4te.cache/
@@ -44,6 +45,7 @@ test/zdbpp
 !config/tnsnames.ora
 
 !doc/api-docs/database.png
+!doc/api-docs/database++.png
 !doc/api-docs/libzdboptions.css
 !doc/api-docs/oracleoptions.html
 !doc/api-docs/libzdb.css
