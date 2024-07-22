@@ -119,8 +119,8 @@
  * ResultSet provides two principal methods for retrieving temporal column
  * values as C types. ResultSet_getTimestamp() converts a SQL timestamp value
  * to a `time_t` and ResultSet_getDateTime() returns a
- * `tm structure` representing a SQL Date, Time, DateTime, or Timestamp
- * column type. To get a temporal column value as a string, simply use ResultSet_getString()
+ * `tm structure` representing a Date, Time, DateTime, or Timestamp column type.
+ * To get a temporal column value as a string, simply use ResultSet_getString()
  *
  * *A ResultSet is reentrant, but not thread-safe and should only be used by
  * one thread (at a time).*
@@ -139,7 +139,7 @@ typedef struct ResultSet_S *T;
 //<< Protected methods
 
 /**
- * Create a new ResultSet.
+ * @brief Create a new ResultSet.
  * @param D the delegate used by this ResultSet
  * @param op delegate operations
  * @return A new ResultSet object
@@ -148,7 +148,7 @@ T ResultSet_new(ResultSetDelegate_T D, Rop_T op) __attribute__ ((visibility("hid
 
 
 /**
- * Destroy a ResultSet and release allocated resources.
+ * @brief Destroy a ResultSet and release allocated resources.
  * @param R A ResultSet object reference
  */
 void ResultSet_free(T *R) __attribute__ ((visibility("hidden")));
@@ -159,7 +159,7 @@ void ResultSet_free(T *R) __attribute__ ((visibility("hidden")));
 //@{
 
 /**
- * Returns the number of columns in this ResultSet object.
+ * @brief Gets the number of columns in this ResultSet.
  * @param R A ResultSet object
  * @return The number of columns
  */
@@ -167,7 +167,7 @@ int ResultSet_getColumnCount(T R);
 
 
 /**
- * Get the designated column's name.
+ * @brief Gets the designated column's name.
  * @param R A ResultSet object
  * @param columnIndex The first column is 1, the second is 2, ...
  * @return Column name or NULL if the column does not exist. You
@@ -178,11 +178,13 @@ const char *ResultSet_getColumnName(T R, int columnIndex);
 
 
 /**
- * Returns column size in bytes. If the column is a blob then
- * this method returns the number of bytes in that blob. No type
- * conversions occur. If the result is a string (or a number
- * since a number can be converted into a string) then return the
- * number of bytes in the resulting string.
+ * @brief Gets the size of a column in bytes.
+ *
+ * If the column is a blob then this method returns the number of bytes
+ * in that blob. No type conversions occur. If the result is a string
+ * (or a number since a number can be converted into a string) then return
+ * the number of bytes in the resulting string.
+ *
  * @param R A ResultSet object
  * @param columnIndex The first column is 1, the second is 2, ...
  * @return Column data size
@@ -193,11 +195,12 @@ long ResultSet_getColumnSize(T R, int columnIndex);
 
 
 /**
- * Specify the number of rows that should be fetched from the database
- * when more rows are needed for **this** ResultSet. ResultSet will prefetch
- * rows in batches of number of `rows` when ResultSet_next()
- * is called to reduce the network roundtrip to the database. This method
- * is only applicable to MySQL and Oracle.
+ * @brief Sets the number of rows to fetch from the database.
+ *
+ * ResultSet will prefetch rows in batches of number of `rows` when
+ * ResultSet_next() is called to reduce the network roundtrip to the database.
+ * This method is only applicable to MySQL and Oracle.
+ *
  * @param R A ResultSet object
  * @param rows The number of rows to fetch (1..INT_MAX)
  * @exception SQLException If a database error occurs
@@ -208,10 +211,11 @@ void ResultSet_setFetchSize(T R, int rows);
 
 
 /**
- * Get the number of rows that should be fetched from the database
- * when more rows are needed for this ResultSet. Unless previously set
- * with ResultSet_setFetchSize(), the returned value is the same as
- * returned by Connection_getFetchSize()
+ * @brief Gets the number of rows to fetch from the database.
+ *
+ * Unless previously set with ResultSet_setFetchSize(), the returned value
+ * is the same as returned by Connection_getFetchSize()
+ *
  * @param R A ResultSet object
  * @return The number of rows to fetch or 0 if N/A
  * @see Connection_getFetchSize
@@ -225,12 +229,14 @@ int ResultSet_getFetchSize(T R);
 //@{
 
 /**
- * Moves the cursor down one row from its current position. A
- * ResultSet cursor is initially positioned before the first row; the
+ * @brief Moves the cursor to the next row.
+ *
+ * A ResultSet cursor is initially positioned before the first row; the
  * first call to this method makes the first row the current row; the
  * second call makes the second row the current row, and so on. When
  * there are no more available rows false is returned. An empty
  * ResultSet will return false on the first call to ResultSet_next().
+ *
  * @param R A ResultSet object
  * @return true if the new current row is valid; false if there are no
  * more rows
@@ -245,11 +251,12 @@ bool ResultSet_next(T R);
 //@{
 
 /**
- * Returns true if the value of the designated column in the current row of
- * this ResultSet object is SQL NULL, otherwise false. If the column value is
- * SQL NULL, a ResultSet returns the NULL pointer for reference types and 0
- * for value types. Use this method if you need to differentiate between SQL NULL and
- * the value NULL/0.
+ * @brief Checks if the designated column's value is SQL NULL.
+ *
+ * If the column value is SQL NULL, a ResultSet returns the NULL for
+ * reference types and 0 for value types. Use this method if you need to
+ * differentiate between SQL NULL and the value NULL/0.
+ *
  * @param R A ResultSet object
  * @param columnIndex The first column is 1, the second is 2, ...
  * @return True if column value is SQL NULL, otherwise false
@@ -261,12 +268,12 @@ bool ResultSet_isnull(T R, int columnIndex);
 
 
 /**
- * Retrieves the value of the designated column in the current row of
- * this ResultSet object as a C-string. If `columnIndex`
- * is outside the range [1..ResultSet_getColumnCount()] this
- * method throws an SQLException. *The returned string may only be
- * valid until the next call to ResultSet_next() and if you plan to use
- * the returned value longer, you must make a copy.*
+ * @brief Gets the designated column's value as a C-string.
+ *
+ * _The returned string may only be valid until the next call to
+ * ResultSet_next() and if you plan to use the returned value longer,
+ * you must make a copy._
+ *
  * @param R A ResultSet object
  * @param columnIndex The first column is 1, the second is 2, ...
  * @return The column value; if the value is SQL NULL, the value
@@ -279,11 +286,12 @@ const char *ResultSet_getString(T R, int columnIndex);
 
 
 /**
- * Retrieves the value of the designated column in the current row of
- * this ResultSet object as a C-string. If `columnName`
- * is not found this method throws an SQLException. *The returned string
- * may only be valid until the next call to ResultSet_next() and if you plan
- * to use the returned value longer, you must make a copy.*
+ * @brief Gets the designated column's value as a C-string.
+
+ * _The returned string may only be valid until the next call to
+ * ResultSet_next() and if you plan to use the returned value longer,
+ * you must make a copy._
+ *
  * @param R A ResultSet object
  * @param columnName The SQL name of the column. *case-sensitive*
  * @return The column value; if the value is SQL NULL, the value
@@ -296,15 +304,13 @@ const char *ResultSet_getStringByName(T R, const char *columnName);
 
 
 /**
- * Retrieves the value of the designated column in the current row of this
- * ResultSet object as an int. If `columnIndex` is outside the
- * range [1..ResultSet_getColumnCount()] this method throws an SQLException.
+ * @brief Gets the designated column's value as an int.
+ *
  * In general, on both 32 and 64 bit architectures, `int` is 4 bytes
- * or 32 bits and `long long` is 8 bytes or 64 bits. A
- * `long` type is usually equal to `int` on 32 bit
- * architecture and equal to `long long` on 64 bit architecture.
- * However, the width of integer types is architecture and compiler dependent.
- * The above is usually true, but not necessarily.
+ * or 32 bits and `long long` is 8 bytes or 64 bits. A `long` type is
+ * usually equal to `int` on 32 bit architecture and equal to `long long`
+ * on 64 bit architecture.
+ *
  * @param R A ResultSet object
  * @param columnIndex The first column is 1, the second is 2, ...
  * @return The column value; if the value is SQL NULL, the value
@@ -317,15 +323,13 @@ int ResultSet_getInt(T R, int columnIndex);
 
 
 /**
- * Retrieves the value of the designated column in the current row of
- * this ResultSet object as an int. If `columnName` is
- * not found this method throws an SQLException.
+ * @brief Gets the designated column's value as an int.
+ *
  * In general, on both 32 and 64 bit architectures, `int` is 4 bytes
- * or 32 bits and `long long` is 8 bytes or 64 bits. A
- * `long` type is usually equal to `int` on 32 bit
- * architecture and equal to `long long` on 64 bit architecture.
- * However, the width of integer types is architecture and compiler dependent.
- * The above is usually true, but not necessarily.
+ * or 32 bits and `long long` is 8 bytes or 64 bits. A `long` type is
+ * usually equal to `int` on 32 bit architecture and equal to `long long`
+ * on 64 bit architecture.
+ *
  * @param R A ResultSet object
  * @param columnName The SQL name of the column. *case-sensitive*
  * @return The column value; if the value is SQL NULL, the value
@@ -338,16 +342,13 @@ int ResultSet_getIntByName(T R, const char *columnName);
 
 
 /**
- * Retrieves the value of the designated column in the current row of
- * this ResultSet object as a long long. If `columnIndex`
- * is outside the range [1..ResultSet_getColumnCount()] this
- * method throws an SQLException.
+ * @brief Gets the designated column's value as a long long.
+
  * In general, on both 32 and 64 bit architectures, `int` is 4 bytes
- * or 32 bits and `long long` is 8 bytes or 64 bits. A
- * `long` type is usually equal to `int` on 32 bit
- * architecture and equal to `long long` on 64 bit architecture.
- * However, the width of integer types is architecture and compiler dependent.
- * The above is usually true, but not necessarily.
+ * or 32 bits and `long long` is 8 bytes or 64 bits. A `long` type is
+ * usually equal to `int` on 32 bit architecture and equal to `long long`
+ * on 64 bit architecture.
+ *
  * @param R A ResultSet object
  * @param columnIndex The first column is 1, the second is 2, ...
  * @return The column value; if the value is SQL NULL, the value
@@ -360,15 +361,13 @@ long long ResultSet_getLLong(T R, int columnIndex);
 
 
 /**
- * Retrieves the value of the designated column in the current row of
- * this ResultSet object as a long long. If `columnName`
- * is not found this method throws an SQLException.
+ * @brief Gets the designated column's value as a long long.
+
  * In general, on both 32 and 64 bit architectures, `int` is 4 bytes
- * or 32 bits and `long long` is 8 bytes or 64 bits. A
- * `long` type is usually equal to `int` on 32 bit
- * architecture and equal to `long long` on 64 bit architecture.
- * However, the width of integer types is architecture and compiler dependent.
- * The above is usually true, but not necessarily.
+ * or 32 bits and `long long` is 8 bytes or 64 bits. A `long` type is
+ * usually equal to `int` on 32 bit architecture and equal to `long long`
+ * on 64 bit architecture.
+ *
  * @param R A ResultSet object
  * @param columnName The SQL name of the column. *case-sensitive*
  * @return The column value; if the value is SQL NULL, the value
@@ -381,10 +380,7 @@ long long ResultSet_getLLongByName(T R, const char *columnName);
 
 
 /**
- * Retrieves the value of the designated column in the current row of
- * this ResultSet object as a double. If `columnIndex`
- * is outside the range [1..ResultSet_getColumnCount()] this
- * method throws an SQLException.
+ * @brief Gets the designated column's value as a double.
  * @param R A ResultSet object
  * @param columnIndex The first column is 1, the second is 2, ...
  * @return The column value; if the value is SQL NULL, the value
@@ -397,9 +393,7 @@ double ResultSet_getDouble(T R, int columnIndex);
 
 
 /**
- * Retrieves the value of the designated column in the current row of
- * this ResultSet object as a double. If `columnName` is
- * not found this method throws an SQLException.
+ * @brief Gets the designated column's value as a double.
  * @param R A ResultSet object
  * @param columnName The SQL name of the column. *case-sensitive*
  * @return The column value; if the value is SQL NULL, the value
@@ -412,12 +406,12 @@ double ResultSet_getDoubleByName(T R, const char *columnName);
 
 
 /**
- * Retrieves the value of the designated column in the current row of
- * this ResultSet object as a void pointer. If `columnIndex`
- * is outside the range [1..ResultSet_getColumnCount()] this method
- * throws an SQLException. *The returned blob may only be valid until
- * the next call to ResultSet_next() and if you plan to use the returned
- * value longer, you must make a copy.*
+ * @brief Gets the designated column's value as a void pointer.
+ *
+ * _The returned blob may only be valid until the next call to
+ * ResultSet_next() and if you plan to use the returned value longer,
+ * you must make a copy._
+ *
  * @param R A ResultSet object
  * @param columnIndex The first column is 1, the second is 2, ...
  * @param size The number of bytes in the blob is stored in size
@@ -431,11 +425,12 @@ const void *ResultSet_getBlob(T R, int columnIndex, int *size);
 
 
 /**
- * Retrieves the value of the designated column in the current row of
- * this ResultSet object as a void pointer. If `columnName`
- * is not found this method throws an SQLException. *The returned
- * blob may only be valid until the next call to ResultSet_next() and if
- * you plan to use the returned value longer, you must make a copy.*
+ * @brief Gets the designated column's value as a void pointer.
+ *
+ * _The returned blob may only be valid until the next call to
+ * ResultSet_next() and if you plan to use the returned value longer,
+ * you must make a copy._
+ *
  * @param R A ResultSet object
  * @param columnName The SQL name of the column. *case-sensitive*
  * @param size The number of bytes in the blob is stored in size
@@ -453,10 +448,10 @@ const void *ResultSet_getBlobByName(T R, const char *columnName, int *size);
 //@{
 
 /**
- * Retrieves the value of the designated column in the current row of this
- * ResultSet object as a Unix timestamp. The returned value is in Coordinated
- * Universal Time (UTC) and represents seconds since the **epoch**
- * (January 1, 1970, 00:00:00 GMT).
+ * @brief Gets the designated column's value as a Unix timestamp.
+ *
+ * The returned value is in Coordinated Universal Time (UTC) and represents
+ * seconds since the **epoch** (January 1, 1970, 00:00:00 GMT).
  *
  * Even though the underlying database might support timestamp ranges before
  * the epoch and after '2038-01-19 03:14:07 UTC' it is safest not to assume or
@@ -466,13 +461,12 @@ const void *ResultSet_getBlobByName(T R, const char *columnName, int *size);
  * and using this method with SQLite assumes the column value in the Result Set
  * to be either a numerical value representing a Unix Time in UTC which is
  * returned as-is or an [ISO 8601](http://en.wikipedia.org/wiki/ISO_8601)
- * time string which is converted to a time_t value.
- * See also PreparedStatement_setTimestamp()
+ * time string which is converted to a `time_t` value.
+ *
  * @param R A ResultSet object
  * @param columnIndex The first column is 1, the second is 2, ...
- * @return The column value as seconds since the epoch in the
- * *GMT timezone*. If the value is SQL NULL, the
- * value returned is 0, i.e. January 1, 1970, 00:00:00 GMT
+ * @return The column value as seconds since the epoch in the GMT timezone.
+ *         If the value is SQL NULL, the value returned is 0.
  * @exception SQLException If a database access error occurs, if
  * `columnIndex` is outside the range [1..ResultSet_getColumnCount()]
  * or if the column value cannot be converted to a valid timestamp
@@ -482,10 +476,10 @@ time_t ResultSet_getTimestamp(T R, int columnIndex);
 
 
 /**
- * Retrieves the value of the designated column in the current row of this
- * ResultSet object as a Unix timestamp. The returned value is in Coordinated
- * Universal Time (UTC) and represents seconds since the **epoch**
- * (January 1, 1970, 00:00:00 GMT).
+ * @brief Gets the designated column's value as a Unix timestamp.
+ *
+ * The returned value is in Coordinated Universal Time (UTC) and represents
+ * seconds since the **epoch** (January 1, 1970, 00:00:00 GMT).
  *
  * Even though the underlying database might support timestamp ranges before
  * the epoch and after '2038-01-19 03:14:07 UTC' it is safest not to assume or
@@ -495,13 +489,12 @@ time_t ResultSet_getTimestamp(T R, int columnIndex);
  * and using this method with SQLite assumes the column value in the Result Set
  * to be either a numerical value representing a Unix Time in UTC which is
  * returned as-is or an [ISO 8601](http://en.wikipedia.org/wiki/ISO_8601)
- * time string which is converted to a time_t value.
- * See also PreparedStatement_setTimestamp()
+ * time string which is converted to a `time_t` value.
+ *
  * @param R A ResultSet object
  * @param columnName The SQL name of the column. *case-sensitive*
- * @return The column value as seconds since the epoch in the
- * *GMT timezone*. If the value is SQL NULL, the
- * value returned is 0, i.e. January 1, 1970, 00:00:00 GMT
+ * @return The column value as seconds since the epoch in the GMT timezone.
+ *         If the value is SQL NULL, the value returned is 0.
  * @exception SQLException If a database access error occurs, if
  * `columnName` is not found or if the column value cannot be
  * converted to a valid timestamp
@@ -511,11 +504,11 @@ time_t ResultSet_getTimestampByName(T R, const char *columnName);
 
 
 /**
- * Retrieves the value of the designated column in the current row of this
- * ResultSet object as a Date, Time or DateTime. This method can be used to
- * retrieve the value of columns with the SQL data type, Date, Time, DateTime
- * or Timestamp. The returned `tm` structure follows the convention
- * for usage with mktime(3) where:
+ * @brief Gets the designated column's value as a Date, Time or DateTime.
+ *
+ * This method can be used to retrieve the value of columns with the SQL data
+ * type, Date, Time, DateTime or Timestamp. The returned `tm` structure follows
+ * the convention for usage with mktime(3) where:
  *
  * - tm_hour = hours since midnight [0-23]
  * - tm_min = minutes after the hour [0-59]
@@ -524,11 +517,11 @@ time_t ResultSet_getTimestampByName(T R, const char *columnName);
  * - tm_mon = months since January **[0-11]**
  *
  * If the column value contains timezone information, tm_gmtoff is set to the
- * offset from UTC in seconds, otherwise tm_gmtoff is set to 0. *On systems
+ * offset from UTC in seconds, otherwise tm_gmtoff is set to 0. _On systems
  * without tm_gmtoff, (Solaris), the member, tm_wday is set to gmt offset
- * instead as this property is ignored by mktime on input.* The exception to
- * the above is **tm_year** which contains the year literal and *not years
- * since 1900* which is the convention. All other fields in the structure are
+ * instead as this property is ignored by mktime on input._ The exception to
+ * the above is **tm_year** which contains the year literal and _not years
+ * since 1900_ which is the convention. All other fields in the structure are
  * set to zero. If the column type is DateTime or Timestamp all the fields
  * mentioned above are set, if it is a Date or a Time, only the relevant
  * fields are set.
@@ -547,11 +540,11 @@ struct tm ResultSet_getDateTime(T R, int columnIndex);
 
 
 /**
- * Retrieves the value of the designated column in the current row of this
- * ResultSet object as a Date, Time or DateTime. This method can be used to
- * retrieve the value of columns with the SQL data type, Date, Time, DateTime
- * or Timestamp. The returned `tm` structure follows the convention
- * for usage with mktime(3) where:
+ * @brief Gets the designated column's value as a Date, Time or DateTime.
+ *
+ * This method can be used to retrieve the value of columns with the SQL data
+ * type, Date, Time, DateTime or Timestamp. The returned `tm` structure follows
+ * the convention for usage with mktime(3) where:
  *
  * - tm_hour = hours since midnight [0-23]
  * - tm_min = minutes after the hour [0-59]
@@ -560,11 +553,11 @@ struct tm ResultSet_getDateTime(T R, int columnIndex);
  * - tm_mon = months since January **[0-11]**
  *
  * If the column value contains timezone information, tm_gmtoff is set to the
- * offset from UTC in seconds, otherwise tm_gmtoff is set to 0. *On systems
+ * offset from UTC in seconds, otherwise tm_gmtoff is set to 0. _On systems
  * without tm_gmtoff, (Solaris), the member, tm_wday is set to gmt offset
- * instead as this property is ignored by mktime on input.* The exception to
- * the above is **tm_year** which contains the year literal and *not years
- * since 1900* which is the convention. All other fields in the structure are
+ * instead as this property is ignored by mktime on input._ The exception to
+ * the above is **tm_year** which contains the year literal and _not years
+ * since 1900_ which is the convention. All other fields in the structure are
  * set to zero. If the column type is DateTime or Timestamp all the fields
  * mentioned above are set, if it is a Date or a Time, only the relevant
  * fields are set.

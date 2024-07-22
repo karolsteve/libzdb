@@ -93,16 +93,16 @@
  *        printf("employee.id = %d\n", ResultSet_getInt(r, 1));
  * ```
  *
- * A ResultSet returned from PreparedStatement_executeQuery() "lives" until
+ * A ResultSet returned from PreparedStatement_executeQuery() is valid until
  * the Prepared Statement is executed again or until the Connection is
  * returned to the Connection Pool.
  *
  * ## Date and Time
  *
- * PreparedStatement provides PreparedStatement_setTimestamp() for setting a
- * Unix timestamp value. To set SQL Date, Time or DateTime values, simply use
- * PreparedStatement_setString() with a time string format understood by your
- * database. For instance to set a SQL Date value,
+ * PreparedStatement_setTimestamp() can be used to set a Unix timestamp value as
+ * a `time_t` type. To set Date, Time or DateTime values, simply use
+ * PreparedStatement_setString() to set a time string in a format understood by
+ * your database. For instance to set a SQL Date value,,
  * ```c
  * PreparedStatement_setString(p, parameterIndex, "2019-12-28");
  * ```
@@ -134,7 +134,7 @@ typedef struct PreparedStatement_S *T;
 //<< Protected methods
 
 /**
- * Create a new PreparedStatement.
+ * @brief Create a new PreparedStatement.
  * @param D the delegate used by this PreparedStatement
  * @param op delegate operations
  * @return A new PreparedStatement object
@@ -143,7 +143,7 @@ T PreparedStatement_new(PreparedStatementDelegate_T D, Pop_T op) __attribute__ (
 
 
 /**
- * Destroy a PreparedStatement and release allocated resources.
+ * @brief Destroy a PreparedStatement and release allocated resources.
  * @param P A PreparedStatement object reference
  */
 void PreparedStatement_free(T *P) __attribute__ ((visibility("hidden")));
@@ -154,7 +154,7 @@ void PreparedStatement_free(T *P) __attribute__ ((visibility("hidden")));
 //@{
 
 /**
- * Sets the *in* parameter at index `parameterIndex` to the
+ * @brief Sets the *in* parameter at index `parameterIndex` to the
  * given string value.
  * @param P A PreparedStatement object
  * @param parameterIndex The first parameter is 1, the second is 2,..
@@ -168,14 +168,8 @@ void PreparedStatement_setString(T P, int parameterIndex, const char *x);
 
 
 /**
- * Sets the *in* parameter at index `parameterIndex` to the
+ * @brief Sets the *in* parameter at index `parameterIndex` to the
  * given int value.
- * In general, on both 32 and 64 bit architectures, `int` is 4 bytes
- * or 32 bits and `long long` is 8 bytes or 64 bits. A
- * `long` type is usually equal to `int` on 32 bit
- * architecture and equal to `long long` on 64 bit architecture.
- * However, the width of integer types is architecture and compiler dependent.
- * The above is usually true, but not necessarily.
  * @param P A PreparedStatement object
  * @param parameterIndex The first parameter is 1, the second is 2,..
  * @param x The int value to set
@@ -187,14 +181,8 @@ void PreparedStatement_setInt(T P, int parameterIndex, int x);
 
 
 /**
- * Sets the *in* parameter at index `parameterIndex` to the
+ * @brief Sets the *in* parameter at index `parameterIndex` to the
  * given long long value.
- * In general, on both 32 and 64 bit architectures, `int` is 4 bytes
- * or 32 bits and `long long` is 8 bytes or 64 bits. A
- * `long` type is usually equal to `int` on 32 bit
- * architecture and equal to `long long` on 64 bit architecture.
- * However, the width of integer types is architecture and compiler dependent.
- * The above is usually true, but not necessarily.
  * @param P A PreparedStatement object
  * @param parameterIndex The first parameter is 1, the second is 2,..
  * @param x The long long value to set
@@ -206,7 +194,7 @@ void PreparedStatement_setLLong(T P, int parameterIndex, long long x);
 
 
 /**
- * Sets the *in* parameter at index `parameterIndex` to the
+ * @brief Sets the *in* parameter at index `parameterIndex` to the
  * given double value.
  * @param P A PreparedStatement object
  * @param parameterIndex The first parameter is 1, the second is 2,..
@@ -219,7 +207,7 @@ void PreparedStatement_setDouble(T P, int parameterIndex, double x);
 
 
 /**
- * Sets the *in* parameter at index `parameterIndex` to the
+ * @brief Sets the *in* parameter at index `parameterIndex` to the
  * given blob value.
  * @param P A PreparedStatement object
  * @param parameterIndex The first parameter is 1, the second is 2,..
@@ -233,14 +221,16 @@ void PreparedStatement_setBlob(T P, int parameterIndex, const void *x, int size)
 
 
 /**
- * Sets the *in* parameter at index `parameterIndex` to the
- * given Unix timestamp value. The timestamp value given in `x`
- * is expected to be in the GMT timezone. For instance, a value returned by
- * time(3) which represents the system's notion of the current Greenwich time.
- * *SQLite* does not have temporal SQL data types per se
- * and using this method with SQLite will store the timestamp value as a
+ * @brief Sets the *in* parameter at index `parameterIndex` to the
+ * given Unix timestamp value.
+ *
+ * The timestamp value given in `x` is expected to be in the GMT timezone.
+ * For instance, a value returned by time(3) which represents the system's notion
+ * of the current Greenwich time. *SQLite* does not have temporal SQL data types
+ * per se and using this method with SQLite will store the timestamp value as a
  * numerical type, as-is. This is usually what you want; it is fast, compact
  * and unambiguous.
+ *
  * @param P A PreparedStatement object
  * @param parameterIndex The first parameter is 1, the second is 2,..
  * @param x The GMT timestamp value to set. E.g. a value returned by time(3)
@@ -252,7 +242,7 @@ void PreparedStatement_setTimestamp(T P, int parameterIndex, time_t x);
 
 
 /**
- * Sets the *in* parameter at index `parameterIndex` to
+ * @brief Sets the *in* parameter at index `parameterIndex` to
  * SQL NULL.
  * @param P A PreparedStatement object
  * @param parameterIndex The first parameter is 1, the second is 2,..
@@ -268,9 +258,12 @@ void PreparedStatement_setNull(T P, int parameterIndex);
 //@{
 
 /**
+ * @brief Executes the prepared SQL statement.
+ *
  * Executes the prepared SQL statement, which may be an INSERT, UPDATE,
  * or DELETE statement or an SQL statement that returns nothing, such
  * as an SQL DDL statement.
+ *
  * @param P A PreparedStatement object
  * @exception SQLException If a database error occurs
  * @see SQLException.h
@@ -279,10 +272,13 @@ void PreparedStatement_execute(T P);
 
 
 /**
+ * @brief Executes the prepared SQL query.
+ *
  * Executes the prepared SQL statement, which returns a single ResultSet
- * object. A ResultSet "lives" only until the next call to a PreparedStatement
+ * object. A ResultSet is valid until the next call to a PreparedStatement
  * method or until the Connection is returned to the Connection Pool.
  * *This means that Result Sets cannot be saved between queries*.
+ *
  * @param P A PreparedStatement object
  * @return A ResultSet object that contains the data produced by the prepared
  * statement.
@@ -294,10 +290,11 @@ ResultSet_T PreparedStatement_executeQuery(T P);
 
 
 /**
- * Returns the number of rows that was inserted, deleted or modified by the
- * most recently completed SQL statement on the database connection. If used
- * with a transaction, this method should be called *before* commit is
+ * @brief Gets the number of rows affected by the most recent SQL statement.
+ *
+ * If used with a transaction, this method should be called *before* commit is
  * executed, otherwise 0 is returned.
+ *
  * @param P A PreparedStatement object
  * @return The number of rows changed by the last (DIM) SQL statement
  */
@@ -309,9 +306,9 @@ long long PreparedStatement_rowsChanged(T P);
 //@{
 
 /**
- * Returns the number of parameters in this prepared statement.
+ * @brief Gets the number of parameters in the prepared statement.
  * @param P A PreparedStatement object
- * @return The number of parameters in this prepared statement
+ * @return The number of _in_ parameters in this prepared statement
  */
 int PreparedStatement_getParameterCount(T P);
 

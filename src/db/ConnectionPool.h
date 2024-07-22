@@ -38,7 +38,7 @@
  * The following diagram gives an overview of the library's components and
  * their method-associations:
  *
- * <center><img src="database.png"></center>
+ * <center><img src="database.png" class="resp-img" style="width:700px"></center>
  *
  * The method ConnectionPool_getConnection() is used to obtain a new
  * connection from the pool. If there are no connections available, a new
@@ -53,11 +53,13 @@
  * ConnectionPool_setMaxConnections().
  *
  * ## Supported database systems:
+ *
  * This library may be built with support for many different database
  * systems. To test if a particular system is supported, use the method
  * Connection_isSupported().
  *
  * ## Life-cycle methods:
+ *
  * Clients should call ConnectionPool_start() to establish the connection pool
  * against the database server before using the pool. To shutdown
  * connections from the database server, use ConnectionPool_stop(). Set
@@ -69,6 +71,7 @@
  * size of the pool.
  *
  * ## Connection URL:
+ *
  * The URL given to a Connection Pool at creation time specifies a database
  * connection in the standard URL format. The format of the connection URL
  * is defined as:
@@ -83,7 +86,7 @@
  * alternatively be specified in the auth-part of the URL. If port number is
  * omitted, the default port number for the database server is used.
  *
- * #### MySQL:
+ * ### MySQL:
  *
  * Here is an example of how to connect to a [MySQL](http://www.mysql.org/)
  * database server:
@@ -103,7 +106,7 @@
  * See [mysql options](mysqloptions.html) for all properties that
  * can be set for a mysql connection URL.
  *
- * #### SQLite:
+ * ### SQLite:
  *
  * For a [SQLite](http://www.sqlite.org/) database, the connection
  * URL should simply specify a database file, since a SQLite database
@@ -123,7 +126,7 @@
  * sqlite:///var/sqlite/test.db?synchronous=normal&foreign_keys=on&journal_mode=wal&temp_store=memory
  * ```
  *
- * #### PostgreSQL:
+ * ### PostgreSQL:
  *
  * The URL for connecting to a [PostgreSQL](http://www.postgresql.org/)
  * database server might look like:
@@ -148,7 +151,7 @@
  * See [postgresql options](postgresoptions.html) for all properties that
  * can be set for a postgresql connection URL.
  *
- * #### Oracle:
+ * ### Oracle:
  *
  * The URL for connecting to an [Oracle](http://www.oracle.com/)
  * database server might look like:
@@ -184,13 +187,13 @@
  * ConnectionPool_start(pool);
  * //..
  * Connection_T con = ConnectionPool_getConnection(pool);
- * ResultSet_T result = Connection_executeQuery(con, "select id, name, image from employee where salary>%d", anumber);
+ * ResultSet_T result = Connection_executeQuery(con, "select id, name, photo from employee where salary>%d", anumber);
  * while (ResultSet_next(result))
  * {
  *      int id = ResultSet_getInt(result, 1);
  *      const char *name = ResultSet_getString(result, 2);
  *      int blobSize;
- *      const void *image = ResultSet_getBlob(result, 3, &blobSize);
+ *      const void *photo = ResultSet_getBlob(result, 3, &blobSize);
  *      // ...
  * }
  * Connection_close(con);
@@ -201,33 +204,30 @@
  *
  * ## Optimizing the pool size:
  *
- * The pool can be set up to dynamically change the number of active
- * connections in the pool depending on the load. A single `reaper`
- * thread can be activated at startup to perform two critical functions:
+ * The pool is designed to dynamically manage the number of active connections
+ * based on usage patterns. A `reaper` thread is automatically started when the
+ * pool is initialized, performing two critical functions:
  *
- * 1. Sweep through the pool at regular intervals and close connections
- *    that have been inactive for a specified time (default 60 seconds).
- * 2. Perform periodic validation (ping test) on idle connections to
- *    ensure they remain valid and responsive.
+ * 1. Sweeping through the pool at regular intervals (default every 60 seconds)
+ *    to close connections that have been inactive for a specified time (default
+ *    90 seconds).
+ * 2. Performing periodic validation (ping test) on idle connections to ensure
+ *    they remain valid and responsive.
  *
- * This dual functionality helps maintain the pool's health by removing
- * stale connections and verifying the validity of idle ones, which is
- * particularly important for reducing load on the database and ensuring
- * connection reliability.
+ * This dual functionality helps maintain the pool's health by removing stale
+ * connections and verifying the validity of idle ones, which is particularly
+ * important for reducing load on the database and ensuring connection reliability.
  *
- * Only inactive connections will be closed, and no more than the initial
- * number of connections the pool was started with are closed. The property
- * method, ConnectionPool_setReaper(), is used to specify that a reaper
- * thread should be started when the pool is started. This method *must*
- * be called before ConnectionPool_start(); otherwise, the pool will not
- * start with a reaper thread.
+ * Only inactive connections will be closed, and no more than the initial number
+ * of connections the pool was started with are closed. The property method,
+ * `ConnectionPool_setReaper()`, can be used to customize the reaper's sweep
+ * interval or disable it entirely if needed.
  *
- * Clients can also call the method ConnectionPool_reapConnections() to
- * prune the pool directly if the reaper thread is not activated.
+ * Clients can also call the method `ConnectionPool_reapConnections()` to prune
+ * the pool directly if manual control is desired.
  *
- * It is strongly recommended to start the pool with a reaper thread,
- * especially if the pool maintains TCP/IP Connections, as it ensures
- * both efficient resource management and continuous connection validity.
+ * The reaper thread is especially beneficial for pools maintaining TCP/IP
+ * Connections.
  *
  * ## Realtime inspection:
  *
@@ -235,8 +235,8 @@
  * ConnectionPool_size() returns the number of connections in the pool, that is,
  * both active and inactive connections. The method ConnectionPool_active()
  * returns the number of active connections, i.e., those connections in
- * current use by your application. The method ConnectionPool_isFull() can be
- * used to check if the pool is full and no longer can return a new connection.
+ * current use by your application. The method ConnectionPool_isFull() can
+ * be used to check if the pool is full and unable to return a connection.
  *
  * *This ConnectionPool is thread-safe.*
  *
@@ -270,8 +270,7 @@ T ConnectionPool_new(URL_T url);
 
 
 /**
- * Disconnect and destroy the pool and release allocated resources.
- *
+ * @brief Disconnect and destroy the pool and release allocated resources.
  * @param P A ConnectionPool object reference
  */
 void ConnectionPool_free(T *P);
@@ -280,9 +279,8 @@ void ConnectionPool_free(T *P);
 //@{
 
 /**
- * Returns this Connection Pool's URL
- * 
- *@param P A ConnectionPool object
+ * @brief Returns this Connection Pool's URL
+ * @param P A ConnectionPool object
  * @return This Connection Pool's URL
  * @see URL.h
  */
@@ -290,18 +288,17 @@ URL_T ConnectionPool_getURL(T P);
 
 
 /**
- * Set the number of initial connections to start the pool with
- *
+ * @brief Sets the number of initial connections in the pool.
  * @param P A ConnectionPool object
- * @param connections The number of initial pool connections
+ * @param initialConnections The number of initial pool connections.
+ * It is a checked runtime error for initialConnections to be < 0
  * @see Connection.h
  */
-void ConnectionPool_setInitialConnections(T P, int connections);
+void ConnectionPool_setInitialConnections(T P, int initialConnections);
 
 
 /**
- * Get the number of initial connections to start the pool with
- *
+ * @brief Gets the number of initial connections in the pool.
  * @param P A ConnectionPool object
  * @return The number of initial pool connections
  * @see Connection.h
@@ -310,8 +307,9 @@ int ConnectionPool_getInitialConnections(T P);
 
 
 /**
- * Set the maximum number of connections this connection pool will
- * create. If max connections has been reached, ConnectionPool_getConnection()
+ * @brief Sets the maximum number of connections in the pool.
+ *
+ * If max connections has been reached, ConnectionPool_getConnection()
  * will return NULL on the next call.
  *
  * @param P A ConnectionPool object
@@ -324,24 +322,25 @@ void ConnectionPool_setMaxConnections(T P, int maxConnections);
 
 
 /**
- * Get the maximum number of connections this Connection pool will create.
- *
+ * @brief Gets the maximum number of connections in the pool.
  * @param P A ConnectionPool object
- * @return The maximum number of connections this connection pool will create.
+ * @return The maximum number of connections this pool will create.
  * @see Connection.h
  */
 int ConnectionPool_getMaxConnections(T P);
 
 
 /**
- * Set a Connection inactive timeout value in seconds. The method
- * ConnectionPool_reapConnections(), if called, will close inactive
- * Connections in the pool which have not been in use for
- * `connectionTimeout` seconds. The default connectionTimeout is
- * 60 seconds. The reaper thread, if in use (see ConnectionPool_setReaper()),
- * uses this value when closing inactive Connections. It is a checked runtime
- * error for `connectionTimeout` to be less than or equal to zero.
+ * @brief Set the Connection inactive timeout value in seconds.
  *
+ * The method ConnectionPool_reapConnections(), if called, will 
+ * close inactive Connections in the pool which have not been in
+ * use for `connectionTimeout` seconds. The default connectionTimeout
+ * is 90 seconds.
+ *
+ * The reaper thread, see ConnectionPool_setReaper(), will use this
+ * value when closing inactive Connections.
+
  * @param P A ConnectionPool object
  * @param connectionTimeout The number of `seconds` a Connection
  * can be inactive (i.e., not in use) before the reaper closes the Connection.
@@ -351,8 +350,7 @@ void ConnectionPool_setConnectionTimeout(T P, int connectionTimeout);
 
 
 /**
- * Returns the connection timeout value in seconds.
- *
+ * @brief Gets the connection timeout value.
  * @param P A ConnectionPool object
  * @return The time an inactive Connection may live before it is closed
  */
@@ -360,8 +358,9 @@ int ConnectionPool_getConnectionTimeout(T P);
 
 
 /**
- * Set the function to call if a fatal error occurs in the library. In
- * practice, this means Out-Of-Memory errors or uncaught exceptions.
+ * @brief Sets the function to call if a fatal error occurs in the library.
+ *
+ * In practice, this means Out-Of-Memory errors or uncaught exceptions.
  * Clients may optionally provide this function. If not provided,
  * the library will call `abort(3)` upon encountering a
  * fatal error if ZBDEBUG is set; otherwise, exit(1) is called. This
@@ -379,21 +378,23 @@ void ConnectionPool_setAbortHandler(T P, void(*abortHandler)(const char *error))
 
 
 /**
- * Specify that a reaper thread should be used by the pool. This thread
- * will close all inactive Connections in the pool, down to initial
- * connections. An inactive Connection is closed if and only if its
- * `connectionTimeout` has expired *or* if the Connection
- * failed the ping test. Active Connections, that is, connections in current
- * use by your application, are *never* closed by this thread. This
- * method sets the reaper thread sweep property but does not start the
- * thread. This is done in ConnectionPool_start(). So, if the pool should
- * use a reaper thread, remember to call this method **before**
- * ConnectionPool_start(). It is a checked runtime error for
- * `sweepInterval` to be less than or equal to zero.
+ * @brief Customize the reaper thread behavior or disable it.
+ *
+ * By default, a reaper thread is automatically started when the pool is
+ * initialized, with a default sweep interval of 60 seconds. This method
+ * allows you to change the sweep interval or disable the reaper entirely.
+ *
+ * The reaper thread closes inactive Connections in the pool, down to the 
+ * initial connection count. An inactive Connection is closed if its
+ * `connectionTimeout` has expired or if it fails the ping test. Active
+ * Connections (those in current use) are never closed by this thread.
+ *
+ * This method can be called before or after ConnectionPool_start(). If 
+ * called after start, the changes will take effect on the next sweep cycle.
  *
  * @param P A ConnectionPool object
- * @param sweepInterval Number of `seconds` between sweeps of the
- * reaper thread (value > 0)
+ * @param sweepInterval Number of seconds between sweeps of the reaper thread.
+ *        Set to 0 or a negative value to disable the reaper thread.
  */
 void ConnectionPool_setReaper(T P, int sweepInterval);
 
@@ -404,10 +405,12 @@ void ConnectionPool_setReaper(T P, int sweepInterval);
 //@{
 
 /**
- * Prepare for the beginning of active use of this component. This method
- * must be called before the pool is used and will connect to the database
- * server and create the initial connections for the pool. This method will
- * also start the reaper thread if specified via ConnectionPool_setReaper().
+ * @brief Prepares the pool for active use.
+ *
+ * This method must be called before the pool is used. It will connect to the 
+ * database server, create the initial connections for the pool, and start the
+ * reaper thread with default settings, unless previously disabled via
+ * ConnectionPool_setReaper().
  *
  * @param P A ConnectionPool object
  * @exception SQLException If a database error occurs.
@@ -417,10 +420,11 @@ void ConnectionPool_start(T P);
 
 
 /**
- * Gracefully terminate the active use of the public methods of this
- * component. This method should be the last one called on a given instance
- * of this component. Calling this method closes down all connections in the
- * pool, disconnects the pool from the database server, and stops the reaper
+ * @brief Gracefully terminates the pool.
+ *
+ * This method should be the last one called on a given instance of this
+ * component. Calling this method closes down all connections in the pool,
+ * disconnects the pool from the database server, and stops the reaper
  * thread if it was started.
  *
  * @param P A ConnectionPool object
@@ -429,47 +433,79 @@ void ConnectionPool_stop(T P);
 
 
 /**
- * Get a connection from the pool. The returned Connection (if any) is
- * guaranteed to be alive and connected to the database. NULL is returned
- * if the pool is full and there are no available connections or if a
- * database error occurred.
+ * @brief Get a connection from the pool.
  *
- * This example can help to differentiate between a full pool (in which case
- * increasing max connections can help) or a database error (in which case nothing
- * will help, except calling the DBA).
+ * The returned Connection (if any) is guaranteed to be alive and connected to
+ * the database. NULL is returned if a database error occurred or if the pool
+ * is full and cannot return a new connection.
  *
- * ```
+ * This example demonstrates how to check if the pool is full before attempting
+ * to get a connection, and how to handle potential errors:
+ *
+ * ```c
+ * if (ConnectionPool_isFull(p)) {
+ *     // Consider increasing pool size before trying to get a connection
+ *     // ConnectionPool_setMaxConnections(p, ...)
+ * }
+ *
  * Connection_T con = ConnectionPool_getConnection(p);
  * if (!con) {
- *      if (ConnectionPool_isFull(p)) {
- *          // Try increasing its max size
- *          ConnectionPool_setMaxConnections(p,
- *              ConnectionPool_getMaxConnections(p) + 5);
- *          con = ConnectionPool_getConnection(p);
- *          // Check if we got a connection
- *      } else {
- *          // A database error occurred. This could be due
- *          // to network issues or database unavailability
- *      }
+ *     if (ConnectionPool_isFull(p)) {
+ *         // Pool is full
+ *         fprintf(stderr, "Connection pool is full. Cannot acquire a new connection.\n");
+ *     } else {
+ *         // A database error occurred. This could be due
+ *         // to network issues or database unavailability
+ *         fprintf(stderr, "Database error: Unable to acquire a connection.\n");
+ *     }
+ * } else {
+ *     // Use the connection...
  * }
  * ```
  *
  * @param P A ConnectionPool object
- * @return A connection from the pool or NULL if maxConnection has been
- * reached, if a database error occurred, or if maximum retry attempts were exceeded.
+ * @return A connection from the pool or NULL if a database error occurred.
  * @see Connection.h
  * @see ConnectionPool_setMaxRetries(T P, int maxRetries)
  */
 Connection_T ConnectionPool_getConnection(T P);
 
+
 /**
- * Get a connection from the pool or throw an SQL Exception if a connection
- * cannot be obtained. The returned Connection is guaranteed to be
- * alive and connected to the database. The method ConnectionPool_getConnection()
- * above is identical except it will return NULL if the pool is full or
- * if a database error occured. This method will instead throw an SQLException
- * in both cases with an appropriate error message.
- * 
+ * @brief Get a connection from the pool.
+ *
+ * The returned Connection is guaranteed to be alive and connected to the 
+ * database. The method ConnectionPool_getConnection() above is identical
+ * except it will return NULL if the pool is full or if a database error
+ * occured. This method will instead throw an SQLException in both cases
+ * with an appropriate error message.
+ *
+ * This example demonstrates how to check if the pool is full before attempting
+ * to get a connection, and how to handle potential errors:
+ *
+ * ```c
+ * if (ConnectionPool_isFull(p)) {
+ *     // Consider increasing pool size before trying to get a connection
+ *     // ConnectionPool_setMaxConnections(p, ...)
+ * }
+ *
+ * Connection_T con = NULL;
+ * TRY
+ * {
+ *      con = ConnectionPool_getConnectionOrException(p);
+ *      // Use the connection...
+ * }
+ * ELSE
+ * {
+ *     fprintf(stderr, "Error: %s\n", Exception_frame.message);
+ * }
+ * FINALLY
+ * {
+ *     if (con) Connection_close(con);
+ * }
+ * END_TRY;
+ * ```
+ *
  * @param P A ConnectionPool object
  * @return A connection from the pool
  * @exception SQLException If a database connection cannot be obtained. The
@@ -480,9 +516,8 @@ Connection_T ConnectionPool_getConnectionOrException(T P);
 
 
 /**
- * Returns a connection to the pool. This is the same as calling Connection_close()
- * 
- *@param P A ConnectionPool object
+ * @brief Returns a connection to the pool. The same as calling Connection_close()
+ * @param P A ConnectionPool object
  * @param connection A Connection object
  * @see Connection.h
  */
@@ -490,11 +525,11 @@ void ConnectionPool_returnConnection(T P, Connection_T connection);
 
 
 /**
- * Close all inactive Connections in the pool, down to initial connections.
- * An inactive Connection is closed if and only if its
- * `connectionTimeout` has expired *or* if the Connection
- * failed the ping test against the database. Active Connections are
- * *not* closed by this method.
+ * @brief Reaps inactive connections in the pool.
+ *
+ * An inactive Connection is closed if and only if its `connectionTimeout` has
+ * expired *or* if the Connection failed the ping test against the database.
+ * Active Connections are *not* closed by this method.
  *
  * @param P A ConnectionPool object
  * @return The number of Connections that were closed
@@ -506,18 +541,17 @@ int ConnectionPool_reapConnections(T P);
 
 
 /**
- * Returns the current number of connections in the pool. The number of
- * both active and inactive connections is returned.
- *
+ * @brief Gets the current number of connections in the pool.
  * @param P A ConnectionPool object
- * @return The number of connections in the pool
+ * @return The total number of connections in the pool.
  */
 int ConnectionPool_size(T P);
 
 
 /**
- * Returns the number of active connections in the pool, i.e., connections
- * in use by clients.
+ * @brief Gets the number of active connections in the pool.
+ *
+ * I.e., connections in current use by your application.
  *
  * @param P A ConnectionPool object
  * @return The number of active connections in the pool
@@ -526,10 +560,10 @@ int ConnectionPool_active(T P);
 
 
 /**
- * Returns true if the pool is full. I.e., if the number of *active*
- * connections in the pool is equal to max connections.
- * You can use this method when ConnectionPool_getConnection() returns NULL to
- * determine if the cause is a full pool or a database error.
+ * @brief Checks if the pool is full.
+ *
+ * I.e., if the number of *active* connections in the pool is equal
+ * to max connections and the pool is unable to return a connection
  *
  * @param P A ConnectionPool object
  * @return true if pool is full, false otherwise
@@ -543,9 +577,8 @@ bool ConnectionPool_isFull(T P);
 //@{
 
 /**
- * **Class method**, returns this library's version information
- *
- * @return Library version information
+ * @brief Gets the library version information.
+ * @return The library version information
  */
 const char *ConnectionPool_version(void);
 
