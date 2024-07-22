@@ -150,8 +150,8 @@ void PreparedStatement_free(T *P) __attribute__ ((visibility("hidden")));
 
 //>> End Protected methods
 
-/** @name Parameters */
-//@{
+/// @name Parameters
+/// @{
 
 /**
  * @brief Sets the *in* parameter at index `parameterIndex` to the
@@ -252,10 +252,9 @@ void PreparedStatement_setTimestamp(T P, int parameterIndex, time_t x);
  */
 void PreparedStatement_setNull(T P, int parameterIndex);
 
-//@}
-
-/** @name Functions */
-//@{
+/// @}
+/// @name Functions
+/// @{
 
 /**
  * @brief Executes the prepared SQL statement.
@@ -300,10 +299,9 @@ ResultSet_T PreparedStatement_executeQuery(T P);
  */
 long long PreparedStatement_rowsChanged(T P);
 
-//@}
-
-/** @name Properties */
-//@{
+/// @}
+/// @name Properties
+/// @{
 
 /**
  * @brief Gets the number of parameters in the prepared statement.
@@ -312,6 +310,6 @@ long long PreparedStatement_rowsChanged(T P);
  */
 int PreparedStatement_getParameterCount(T P);
 
-//@}
+/// @}
 #undef T
 #endif

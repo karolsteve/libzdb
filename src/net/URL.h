@@ -99,9 +99,8 @@ T URL_create(const char *url, ...) __attribute__((format (printf, 1, 2)));
  */
 void URL_free(T *U);
 
-
-/** @name Properties */
-//@{
+/// @name Properties
+/// @{
 
 /**
  * @brief Gets the protocol of the URL.
@@ -190,8 +189,9 @@ const char **URL_getParameterNames(T U);
  */
 const char *URL_getParameter(T U, const char *name);
 
-//@}
-
+/// @}
+/// @name Functions
+/// @{
 
 /**
  * @brief Returns a string representation of this URL object.
@@ -200,10 +200,9 @@ const char *URL_getParameter(T U, const char *name);
  */
 const char *URL_toString(T U);
 
-
-/** @name Class functions */
-//@{
-
+/// @}
+/// @name Class functions
+/// @{
 
 /**
  * @brief Unescape a URL string.
@@ -231,7 +230,7 @@ char *URL_unescape(char *url);
  */
 char *URL_escape(const char *url);
 
-//@}
+/// @}
 
 #undef T
 #endif

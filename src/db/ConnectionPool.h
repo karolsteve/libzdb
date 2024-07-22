@@ -275,8 +275,8 @@ T ConnectionPool_new(URL_T url);
  */
 void ConnectionPool_free(T *P);
 
-/** @name Properties */
-//@{
+/// @name Properties
+/// @{
 
 /**
  * @brief Returns this Connection Pool's URL
@@ -398,11 +398,9 @@ void ConnectionPool_setAbortHandler(T P, void(*abortHandler)(const char *error))
  */
 void ConnectionPool_setReaper(T P, int sweepInterval);
 
-
-//@}
-
-/** @name Functions */
-//@{
+/// @}
+/// @name Functions
+/// @{
 
 /**
  * @brief Prepares the pool for active use.
@@ -497,6 +495,8 @@ Connection_T ConnectionPool_getConnection(T P);
  * }
  * ELSE
  * {
+ *     // The error message in Exception_frame.message will specify
+ *     // if the pool was full or the database error that occured
  *     fprintf(stderr, "Error: %s\n", Exception_frame.message);
  * }
  * FINALLY
@@ -517,6 +517,11 @@ Connection_T ConnectionPool_getConnectionOrException(T P);
 
 /**
  * @brief Returns a connection to the pool. The same as calling Connection_close()
+ *
+ * The same as calling Connection_close() on a connection. If the connection
+ * is in an uncommitted transaction, rollback is called. It is an unchecked
+ * error to attempt to use the Connection after this method is called.
+ *
  * @param P A ConnectionPool object
  * @param connection A Connection object
  * @see Connection.h
@@ -571,10 +576,9 @@ int ConnectionPool_active(T P);
 bool ConnectionPool_isFull(T P);
 
 
-// @}
-
-/** @name Class functions */
-//@{
+/// @}
+/// @name Class functions
+/// @{
 
 /**
  * @brief Gets the library version information.
@@ -582,7 +586,7 @@ bool ConnectionPool_isFull(T P);
  */
 const char *ConnectionPool_version(void);
 
-// @}
+/// @}
 
 #undef T
 #endif

@@ -155,8 +155,8 @@ void ResultSet_free(T *R) __attribute__ ((visibility("hidden")));
 
 //>> End Protected methods
 
-/** @name Properties */
-//@{
+/// @name Properties
+/// @{
 
 /**
  * @brief Gets the number of columns in this ResultSet.
@@ -222,11 +222,9 @@ void ResultSet_setFetchSize(T R, int rows);
  */
 int ResultSet_getFetchSize(T R);
 
-
-//@}
-
-/** @name Functions */
-//@{
+/// @}
+/// @name Functions
+/// @{
 
 /**
  * @brief Moves the cursor to the next row.
@@ -244,11 +242,9 @@ int ResultSet_getFetchSize(T R);
  */
 bool ResultSet_next(T R);
 
-
-//@}
-
-/** @name Columns */
-//@{
+/// @}
+/// @name Columns
+/// @{
 
 /**
  * @brief Checks if the designated column's value is SQL NULL.
@@ -442,10 +438,9 @@ const void *ResultSet_getBlob(T R, int columnIndex, int *size);
  */
 const void *ResultSet_getBlobByName(T R, const char *columnName, int *size);
 
-//@}
-
-/** @name Date and Time */
-//@{
+/// @}
+/// @name Date and Time
+/// @{
 
 /**
  * @brief Gets the designated column's value as a Unix timestamp.
@@ -573,7 +568,7 @@ struct tm ResultSet_getDateTime(T R, int columnIndex);
  */
 struct tm ResultSet_getDateTimeByName(T R, const char *columnName);
 
-//@}
+/// @}
 
 #undef T
 #endif

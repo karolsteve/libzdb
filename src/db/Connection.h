@@ -57,8 +57,77 @@
  * A transaction will also rollback if the database is closed or if an
  * error occurs. Nested transactions are not allowed.
  *
- * *A Connection is reentrant, but not thread-safe and should only be used 
+ * ## Examples
+ *
+ * ### Basic Query Execution
+ * @code
+ * Connection_T con = ConnectionPool_getConnection(pool);
+ * if (con) {
+ *     ResultSet_T result = Connection_executeQuery(con, "SELECT name, age FROM users WHERE id = %d", 1);
+ *     if (ResultSet_next(result)) {
+ *         const char* name = ResultSet_getString(result, 1);
+ *         int age = ResultSet_getInt(result, 2);
+ *         printf("Name: %s, Age: %d\n", name ? name : "N/A", age);
+ *     }
+ *     Connection_close(con);
+ * }
+ * @endcode
+ *
+ * ### Transaction Example
+ * @code
+ * Connection_T con = NULL;
+ * TRY
+ * {
+ *     con = ConnectionPool_getConnectionOrException(pool);
+ *     Connection_beginTransaction(con);
+ *     Connection_execute(con, "UPDATE accounts SET balance = balance - %f WHERE id = %d", 100.0, 1);
+ *     Connection_execute(con, "UPDATE accounts SET balance = balance + %f WHERE id = %d", 100.0, 2);
+ *     Connection_commit(con);
+ *     printf("Transfer successful\n");
+ * }
+ * ELSE
+ * {
+ *     // The error message in Exception_frame.message will specify
+ *     // if the pool is full or if a database error occured.
+ *
+ *     printf("Transfer failed: %s\n", Exception_frame.message);
+ *
+ *     // Connection_close() below will automatically call Connection_rollback()
+ *     // if Connection is in an uncommitted transaction. We could of course
+ *     // call Connection_rollback(con) here, but we must then remember to declare
+ *     // the connection volatile to have access to it in this block
+ * }
+ * FINALLY
+ * {
+ *    if (con) Connection_close(con);
+ * }
+ * END_TRY;
+ * @endcode
+ *
+ * ### Using PreparedStatement
+ * @code
+ * Connection_T con = ConnectionPool_getConnection(pool);
+ * if (con) {
+ *     const char *sql = "INSERT INTO logs (message, timestamp) VALUES (?, ?)";
+ *     PreparedStatement_T stmt = Connection_prepareStatement(con, sql);
+ *     PreparedStatement_setString(stmt, 1, "User logged in");
+ *     PreparedStatement_setTimestamp(stmt, 2, time(NULL));
+ *     PreparedStatement_execute(stmt);
+ *     printf("Rows affected: %lld\n", PreparedStatement_rowsChanged(stmt));
+ *     Connection_close(con);
+ * }
+ * @endcode
+ *
+ * *A Connection is reentrant, but not thread-safe and should only be used
  * by one thread (at a time).*
+ *
+ * @note When Connection_close() is called on a Connection object, it is
+ * automatically returned to the pool. If the connection is still in a
+ * transaction at this point, the transaction will be automatically rolled
+ * back. This ensures data integrity even when exceptions occur. It's
+ * recommended to always call Connection_close() in a FINALLY block to
+ * guarantee proper resource management and transaction handling. See the
+ * Transaction Example above for a practical demonstration of this behavior.
  *
  * @see ResultSet.h PreparedStatement.h SQLException.h
  * @file
@@ -117,8 +186,8 @@ time_t Connection_getLastAccessedTime(T C) __attribute__ ((visibility("hidden"))
 
 //>> End Protected methods
 
-/** @name Properties */
-//@{
+/// @name Properties
+/// @{
 
 /**
  * @brief Sets the query timeout for this Connection.
@@ -194,10 +263,9 @@ int Connection_getFetchSize(T C);
  */
 URL_T Connection_getURL(T C);
 
-//@}
-
-/** @name Functions */
-//@{
+/// @}
+/// @name Functions
+/// @{
 
 /**
  * @brief Pings the database server to check if the connection is alive.
@@ -377,10 +445,9 @@ PreparedStatement_T Connection_prepareStatement(T C, const char *sql, ...) __att
  */
 const char *Connection_getLastError(T C);
 
-//@}
-
-/** @name Class functions */
-//@{
+/// @}
+/// @name Class functions
+/// @{
 
 /**
  * @brief Checks if the specified database system is supported.
@@ -394,7 +461,7 @@ const char *Connection_getLastError(T C);
  */
 bool Connection_isSupported(const char *url);
 
-// @}
+/// @}
 
 #undef T
 #endif
