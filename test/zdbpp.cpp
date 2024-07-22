@@ -36,6 +36,16 @@ const std::map<std::string_view, std::string_view> schema {
     { "oracle", "CREATE TABLE zild_t(id NUMBER GENERATED AS IDENTITY, name VARCHAR(255), percent REAL, image BLOB, created_at TIMESTAMP);" }
 };
 
+const std::string_view help = R"(
+Please enter a valid database connection URL and press ENTER
+E.g. sqlite:///tmp/sqlite.db?synchronous=normal
+E.g. mysql://localhost:3306/test?user=root&password=root
+E.g. postgresql://localhost:5432/test?user=root&password=root
+E.g. oracle://scott:tiger@localhost:1521/servicename
+To exit, enter '.' on a single line
+
+Connection URL> )";
+
 [[nodiscard]] static std::string time2iso8601(const std::chrono::system_clock::time_point& time) {
     auto tt = std::chrono::system_clock::to_time_t(time);
     std::array<char, 30> buffer;
@@ -81,7 +91,7 @@ static void testPrepared(ConnectionPool& pool) {
 
     // If the number of values does not match statement placeholders an exception is thrown
     try {
-        prep.bindValues("Ubisoft", 6.66);
+        prep.bindValues("Sauron", 0.00);
         std::cout << "Test failed, did not get exception\n";
         std::exit(1);
     } catch (const sql_exception& e) { }
@@ -128,7 +138,7 @@ static void testQuery(ConnectionPool& pool) {
 static void testException(ConnectionPool& pool) {
     try {
         Connection con = pool.getConnection();
-        PreparedStatement p = con.prepareStatement("blablablabla ?", "bla");
+        PreparedStatement p = con.prepareStatement("blablablabla ?");
         p.execute();
         std::cout << "Test failed, did not get exception\n";
         std::exit(1);
@@ -187,19 +197,13 @@ static void testDropSchema(ConnectionPool& pool) {
 }
 
 int main() {
-    auto help =
-    "Please enter a valid database connection URL and press ENTER\n"
-    "E.g. sqlite:///tmp/sqlite.db?synchronous=off&heap_limit=2000\n"
-    "E.g. mysql://localhost:3306/test?user=root&password=root\n"
-    "E.g. postgresql://localhost:5432/test?user=root&password=root\n"
-    "E.g. oracle://scott:tiger@localhost:1521/servicename\n"
-    "To exit, enter '.' on a single line\n\nConnection URL> ";
-    std::cout << "\033[0;35m\nC++ zdbpp.h API Test:\033[0m\n\n" << help;
+    
+    std::cout << "\033[0;35m\nC++ zdbpp.h API Test:\033[0m\n" << help;
     
     for (std::string line; std::getline(std::cin, line);) {
         if (line == "q" || line == ".")
             break;
-    
+        
         std::optional<URL> url_opt;
         try {
             url_opt = URL(line);
@@ -210,6 +214,7 @@ int main() {
         }
         
         ConnectionPool pool(std::move(*url_opt));
+        pool.setReaper(0); // Disable reaper
         pool.start();
         std::cout << std::string(8, '=') + "> Start Tests\n";
         testCreateSchema(pool);
@@ -218,7 +223,7 @@ int main() {
         testException(pool);
         testAbortHandler(pool);
         testDropSchema(pool);
-        std::cout << std::string(8, '=') + "> Tests: OK\n\n";
+        std::cout << std::string(8, '=') + "> Tests: OK\n";
         std::cout << help;
     }
 }
