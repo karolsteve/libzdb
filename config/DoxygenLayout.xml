@@ -2,7 +2,7 @@
         <!-- Layout definition for a class page -->
         <class>
                 <detaileddescription title=""/>
-                <briefdescription visible="no"/>
+                <briefdescription visible=""/>
                 <includes visible="no"/>
                 <inheritancegraph visible="no"/>
                 <collaborationgraph visible="no"/>
