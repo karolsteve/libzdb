@@ -27,6 +27,8 @@ Version 3.3.0
   a new connection, an exception is thrown with the exact
   cause, which is that the pool is either full or a data-
   base error occurred.
+* New: PreparedStatement_setNull() can be used to explicit
+  set a parameter in a prepared statements to SQL NULL.
 * New: Changed default timeout before an inactive connection
   is evicted from the pool, from 30 seconds to 90 seconds.
   ConnectionPool_setConnectionTimeout() can be used to change
