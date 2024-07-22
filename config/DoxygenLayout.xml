@@ -7,37 +7,9 @@
                 <inheritancegraph visible="no"/>
                 <collaborationgraph visible="no"/>
                 <memberdecl>
-                        <nestedclasses visible="yes" title=""/>
-                        <publictypes title=""/>
-                        <services title=""/>
-                        <interfaces title=""/>
-                        <publicslots title=""/>
-                        <signals title=""/>
-                        <publicmethods title=""/>
-                        <publicstaticmethods title=""/>
-                        <publicattributes title=""/>
-                        <publicstaticattributes title=""/>
-                        <protectedtypes title=""/>
-                        <protectedslots title=""/>
-                        <protectedmethods title=""/>
-                        <protectedstaticmethods title=""/>
-                        <protectedattributes title=""/>
-                        <protectedstaticattributes title=""/>
-                        <packagetypes title=""/>
-                        <packagemethods title=""/>
-                        <packagestaticmethods title=""/>
-                        <packageattributes title=""/>
-                        <packagestaticattributes title=""/>
-                        <properties title=""/>
-                        <events title=""/>
-                        <privatetypes title=""/>
-                        <privateslots title=""/>
-                        <privatemethods title=""/>
-                        <privatestaticmethods title=""/>
-                        <privateattributes title=""/>
-                        <privatestaticattributes title=""/>
-                        <friends title=""/>
-                        <related title="" subtitle=""/>
+                        <publictypes title="no"/>
+                        <publicmethods visible="yes" title=""/>
+                        <publicstaticmethods visible="yes" title=""/>
                         <membergroups visible="yes"/>
                 </memberdecl>
                 <memberdef>
