@@ -211,7 +211,7 @@
 		52788C1813E716A0002F3C7C /* StringBuffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = StringBuffer.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		52788C1B13E716A0002F3C7C /* Vector.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = Vector.c; sourceTree = "<group>"; };
 		52788C1C13E716A0002F3C7C /* Vector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Vector.h; sourceTree = "<group>"; };
-		52788C1D13E716A0002F3C7C /* zdb.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = zdb.h; sourceTree = "<group>"; };
+		52788C1D13E716A0002F3C7C /* zdb.h.in */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = zdb.h.in; sourceTree = "<group>"; };
 		52788C1F13E716A0002F3C7C /* exception.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = exception.c; sourceTree = "<group>"; };
 		52788C2013E716A0002F3C7C /* Makefile.am */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Makefile.am; sourceTree = "<group>"; };
 		52788C2113E716A0002F3C7C /* pool.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = pool.c; sourceTree = "<group>"; };
@@ -225,6 +225,7 @@
 		528F4D3C145A5AA3002CD67D /* libzdb.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libzdb.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		52931A3D1DC2D6710032240D /* oracleoptions.html */ = {isa = PBXFileReference; fileEncoding = 4; indentWidth = 4; lastKnownFileType = text.html; path = oracleoptions.html; sourceTree = "<group>"; tabWidth = 4; };
 		52931A3E1DC2D6710032240D /* libzdboptions.css */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.css; path = libzdboptions.css; sourceTree = "<group>"; };
+		52A73C442C4B6140003F4A87 /* HOWTO.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = HOWTO.md; sourceTree = "<group>"; };
 		52C32EE9145BA3A500C72758 /* Time.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Time.h; sourceTree = "<group>"; };
 		52C32EEB145BA3F900C72758 /* System.c */ = {isa = PBXFileReference; fileEncoding = 4; indentWidth = 8; lastKnownFileType = sourcecode.c.c; path = System.c; sourceTree = "<group>"; tabWidth = 8; };
 		52C32EEC145BA3FA00C72758 /* System.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = System.h; sourceTree = "<group>"; };
@@ -234,6 +235,7 @@
 		52DE1E032232ED8C00173D1B /* PostgresqlAdapter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PostgresqlAdapter.h; sourceTree = "<group>"; };
 		52DE1E07223478A800173D1B /* MysqlAdapter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MysqlAdapter.h; sourceTree = "<group>"; };
 		52E160F9241B068400022FD7 /* ax_info.m4 */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = ax_info.m4; sourceTree = "<group>"; };
+		52E4F1F32C4D562400F12041 /* database++.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "database++.png"; sourceTree = "<group>"; };
 		52E79D72168EA4FC00E510BF /* libzdb.css */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.css; path = libzdb.css; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -337,6 +339,7 @@
 				52788BD413E716A0002F3C7C /* api-docs */,
 				52788BD813E716A0002F3C7C /* LICENSE.pdf */,
 				52788BD913E716A0002F3C7C /* THIRDPARTY-LICENSE */,
+				52A73C442C4B6140003F4A87 /* HOWTO.md */,
 			);
 			path = doc;
 			sourceTree = "<group>";
@@ -345,6 +348,7 @@
 			isa = PBXGroup;
 			children = (
 				52788BD513E716A0002F3C7C /* database.png */,
+				52E4F1F32C4D562400F12041 /* database++.png */,
 				52E79D72168EA4FC00E510BF /* libzdb.css */,
 				52931A3E1DC2D6710032240D /* libzdboptions.css */,
 				52788BD613E716A0002F3C7C /* mysqloptions.html */,
@@ -357,7 +361,7 @@
 		52788BDC13E716A0002F3C7C /* src */ = {
 			isa = PBXGroup;
 			children = (
-				52788C1D13E716A0002F3C7C /* zdb.h */,
+				52788C1D13E716A0002F3C7C /* zdb.h.in */,
 				523FDB952243864B00B3C767 /* zdbpp.h */,
 				52788BDD13E716A0002F3C7C /* Config.h */,
 				527B1E9C1B88A5B300B431F5 /* Thread.h */,
