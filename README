@@ -17,9 +17,9 @@
    disk space. You may need more RAM depending on how many Connections
    the library should create.
 
- * C99 Compiler and Build System
+ * C11 Compiler and Build System
 
-   You will need a C99 compiler installed to build the library. The 
+   You will need a C11 compiler installed to build the library. The 
    GNU C compiler (GCC) from the Free Software Foundation (FSF) is
    recommended. In addition, your PATH must contain basic build tools
    such as make and database configuration scripts for MySQL and 
