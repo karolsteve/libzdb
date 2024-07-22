@@ -104,7 +104,7 @@
  * Default Connection timeout in seconds, used by reaper to remove
  * inactive connections
  */
-#define SQL_DEFAULT_CONNECTION_TIMEOUT 30
+#define SQL_DEFAULT_CONNECTION_TIMEOUT 90
 
 
 /**
