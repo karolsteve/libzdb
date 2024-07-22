@@ -1,10 +1,38 @@
-                        CHANGES version 3.2.3
+                        CHANGES version 3.3.0
 
               This file summarizes changes made since 1.0
 
-Version 3.2.4
+Version 3.3.0
 -------------
-* Fix: Compile errors on 32-bits platforms
+* New: The pool now starts the reaper thread by default,
+  while previously it was started on request. The function
+  ConnectionPool_setReaper() has changed purpose from
+  previously starting the reaper thread to now being able
+  to disable the reaper thread by setting sweep interval to 0.
+* New: The C++ API has been updated to have better
+  ergonomics and provide more modern features. C++20 is
+  required, and the API is not backward compatible. See
+  test/zdbpp.cpp for examples and use of libzdb in a C++
+  project. The C API remains backward compatible and does
+  not require any changes to your code.
+* New: Added ConnectionPool_isFull() for improved connection
+  pool management. This method allows users to check if the
+  pool is at capacity before attempting to get a connection.
+  It's recommended to use ConnectionPool_isFull() before
+  calling ConnectionPool_getConnection() to proactively
+  manage pool resources and handle full pool scenarios
+  efficiently, such as increasing max connections
+* New: Changed default timeout before an inactive connection
+  is evicted from the pool, from 30 seconds to 90 seconds.
+  ConnectionPool_setConnectionTimeout() can be used to change
+  this value.
+* Fix: Improved Connection Pool Concurrency and
+  Reliability. Significantly reduced lock contention in
+  the connection pool when multiple threads request
+  connections simultaneously. Connections returned from
+  the pool are still guaranteed to be active and connected
+  to the database.
+* Fix: Plus minor improvements and fixes
 
 Version 3.2.3
 -------------
