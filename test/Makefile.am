@@ -15,7 +15,7 @@ zdbpp_SOURCES = zdbpp.cpp
 DISTCLEANFILES = *~
 
 distclean-local: 
-	-rm -f Makefile.in
+	-rm -f Makefile.in Makefile
 
 test: unit pool select zdbpp
 

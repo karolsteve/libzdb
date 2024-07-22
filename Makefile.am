@@ -73,9 +73,9 @@ dist-hook::
 	-rm -rf `find $(distdir) -name "._*"`
 	-rm -rf `find $(distdir) -name ".DS_Store"`
 	-rm -rf `find $(distdir) -name ".libs"`
-	-rm -rf `find $(distdir) -name ".svn"`
 	-rm -f $(distdir)/src/xconfig.h $(distdir)/src/stamp-* \
               $(distdir)/tools/bin/filterh
+	-rm -f $(distdir)/test/Makefile
         
 clean-local:
 		-rm -f `find src -name "*.o" -o -name "*.lo" -o -name "*.loT" \
@@ -92,18 +92,19 @@ clean-local:
                 
 
 distclean-local::
+	-rm -f Makefile.in Makefile \
+                libzdb-[0-9].*tar.gz
 	-rm -rf autom4te.cache/ \
                 build/ \
                 $(LIBRARY_NAME)
 	-rm -f tools/bin/filterh \
-           src/xconfig.h.in \
-           config/config.guess \
-           config/config.sub
+           src/xconfig.h.in
 
                         
 cleanall: clean distclean
-	-rm -f Makefile.in test/Makefile.in configure aclocal.m4 \
-        libzdb-[0-9].*tar.gz conf/config.* $(pkgconfig_DATA)
+	-rm -f configure conf/config.* \
+                $(pkgconfig_DATA) \
+                aclocal.m4
 	git clean -fxd
 
 verify: libzdb.la
