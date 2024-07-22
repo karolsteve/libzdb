@@ -96,6 +96,7 @@ static void testPool(const char *testURL) {
                 url = URL_new(testURL);
                 pool = ConnectionPool_new(url);
                 assert(pool);
+                ConnectionPool_setReaper(pool, 0); // disable reaper
                 ConnectionPool_start(pool);
                 ConnectionPool_stop(pool);
                 ConnectionPool_free(&pool);
@@ -130,6 +131,7 @@ static void testPool(const char *testURL) {
                 url = URL_new(testURL);
                 pool = ConnectionPool_new(url);
                 assert(pool);
+                ConnectionPool_setReaper(pool, 0); // disable reaper
                 ConnectionPool_setAbortHandler(pool, TabortHandler);
                 ConnectionPool_start(pool);
                 con = ConnectionPool_getConnection(pool);
@@ -385,6 +387,7 @@ static void testPool(const char *testURL) {
                 url = URL_new(testURL);
                 pool = ConnectionPool_new(url);
                 assert(pool);
+                ConnectionPool_setReaper(pool, 0); // disable reaper
                 ConnectionPool_setAbortHandler(pool, TabortHandler);
                 ConnectionPool_start(pool);
                 con = ConnectionPool_getConnection(pool);
@@ -591,6 +594,7 @@ static void testPool(const char *testURL) {
                         url = URL_new(testURL);
                         pool = ConnectionPool_new(url);
                         assert(pool);
+                        ConnectionPool_setReaper(pool, 0); // disable reaper
                         ConnectionPool_start(pool);
                         Connection_T con = ConnectionPool_getConnection(pool);
                         assert(con);
@@ -639,6 +643,7 @@ static void testPool(const char *testURL) {
                 url = URL_new(testURL);
                 pool = ConnectionPool_new(url);
                 assert(pool);
+                ConnectionPool_setReaper(pool, 0); // disable reaper
                 ConnectionPool_start(pool);
                 Connection_T con = ConnectionPool_getConnection(pool);
                 if (Str_startsWith(testURL, "postgres"))
