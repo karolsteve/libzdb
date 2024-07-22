@@ -60,7 +60,7 @@ API_INTERFACES  = src/zdb.h src/zdbpp.h src/db/ConnectionPool.h \
 
 nobase_nodist_include_HEADERS = $(patsubst %, $(LIBRARY_NAME)/%, $(notdir $(API_INTERFACES)))
 
-libzdb_la_LDFLAGS = $(DBLDFLAGS) -version-info 14:0:1
+libzdb_la_LDFLAGS = $(DBLDFLAGS) -version-info 15:0:0
 
 BUILT_SOURCES   = $(nobase_nodist_include_HEADERS)
 
@@ -80,19 +80,25 @@ dist-hook::
 clean-local:
 		-rm -f `find src -name "*.o" -o -name "*.lo" -o -name "*.loT" \
                 -o -name "*~" -o -name ".#*" -o -name "core*"`
+		@echo "Cleaning up Doxygen generated files..."
+		@find doc/api-docs/ -type f ! -name 'database.png' \
+                                    ! -name 'database++.png' \
+                                    ! -name 'libzdboptions.css' \
+                                    ! -name 'oracleoptions.html' \
+                                    ! -name 'libzdb.css' \
+                                    ! -name 'mysqloptions.html' \
+                                    ! -name 'postgresoptions.html' \
+                                    -exec rm -f {} +
+                
 
 distclean-local::
 	-rm -rf autom4te.cache/ \
                 build/ \
                 $(LIBRARY_NAME)
-	-rm -f  doc/api-docs/*h.html \
-                doc/api-docs/doxygen.css \
-                doc/api-docs/tabs.css \
-                doc/api-docs/*.gif \
-                tools/bin/filterh \
-                src/xconfig.h.in \
-                config/config.guess \
-                config/config.sub
+	-rm -f tools/bin/filterh \
+           src/xconfig.h.in \
+           config/config.guess \
+           config/config.sub
 
                         
 cleanall: clean distclean
