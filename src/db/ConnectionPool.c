@@ -41,6 +41,13 @@
 /**
  * Implementation of the ConnectionPool interface
  *
+ * This implementation provides a thread-safe, self-managing connection pool.
+ * - Dynamic pool size management between initial and max connections
+ * - Periodic connection reaping to remove idle and non-responsive connections
+ * - Efficient "rolling window" approach: removing old connections from the start
+ *   of the pool vector, adding new ones to the end
+ * - Double-check connection validity: both in reaping and before serving to clients
+ *
  * @file
  */
 
@@ -187,10 +194,9 @@ static Connection_T _getConnection(T P, char error[static STRLEN]) {
         }
         // If we're here, either all available connections failed or there were none
         // Try to create a new connection if the pool isn't full
-        // Note: We're aware that 'size' might not reflect the current pool size due to
-        // concurrent modifications. We accept the risk of potential temporary over-allocation
-        // to prioritize getting a creation error if the database is down. This trade-off
-        // ensures we can distinguish between a full pool and database connection issues.
+        // Note: 'size' might not reflect the current pool size due to concurrent modifications.
+        // We risk potential temporary over-allocation to prioritize getting a creation error
+        // if the database is down. 
         if (size < P->maxConnections) {
                 con = _createConnection(P, error);
                 if (con) return con;
@@ -206,6 +212,8 @@ static int _reapConnections(T P) {
         int n = 0;
         int x = Vector_size(P->pool) - _active(P) - P->initialConnections;
         time_t timedout = Time_now() - P->connectionTimeout;
+        // We don't always examine all idle connections in a single run,
+        // but over multiple runs this should cycles through all connections
         for (int i = 0; ((n < x) && (i < Vector_size(P->pool))); i++) {
                 Connection_T con = Vector_get(P->pool, i);
                 if (Connection_isAvailable(con)) {
@@ -248,6 +256,8 @@ T ConnectionPool_new(URL_T url) {
         P->url = url;
         Sem_init(P->alarm);
         Mutex_init(P->mutex);
+        P->doSweep = true;
+        P->sweepInterval = SQL_DEFAULT_SWEEP_INTERVAL;
         P->maxConnections = SQL_DEFAULT_MAX_CONNECTIONS;
         P->pool = Vector_new(SQL_DEFAULT_MAX_CONNECTIONS);
         P->initialConnections = SQL_DEFAULT_INIT_CONNECTIONS;
@@ -279,12 +289,12 @@ URL_T ConnectionPool_getURL(T P) {
 }
 
 
-void ConnectionPool_setInitialConnections(T P, int connections) {
+void ConnectionPool_setInitialConnections(T P, int initialConnections) {
         assert(P);
-        assert(connections >= 0);
+        assert(initialConnections >= 0);
         LOCK(P->mutex)
         {
-                P->initialConnections = connections;
+                P->initialConnections = initialConnections;
         }
         END_LOCK;
 }
@@ -334,15 +344,17 @@ void ConnectionPool_setAbortHandler(T P, void(*abortHandler)(const char *error))
 
 void ConnectionPool_setReaper(T P, int sweepInterval) {
         assert(P);
-        assert(sweepInterval>0);
         LOCK(P->mutex)
         {
-                P->doSweep = true;
-                P->sweepInterval = sweepInterval;
+                if (sweepInterval > 0) {
+                        P->doSweep = true;
+                        P->sweepInterval = sweepInterval;
+                } else {
+                        P->doSweep = false;
+                }
         }
         END_LOCK;
 }
-
 
 /* -------------------------------------------------------- Public methods */
 
