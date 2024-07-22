@@ -41,7 +41,7 @@
 
 /**
  *
- * ### zdbpp.h - C++ Interface for libzdb
+ * @brief zdbpp.h - C++ Interface for libzdb
  *
  * <center><img src="database++.png" class="resp-img" style="width:700px"></center>
  *
@@ -156,18 +156,23 @@
  *
  * ### Transaction Example
  *
- * ```cpp
- * auto con = pool.getConnection();
+ * If an exception occurs at any point before commit() is called,
+ * the transaction will be automatically rolled back when the
+ * Connection object goes out of scope and is returned to the pool.
+ * This ensures data integrity even in the face of exceptions.
  *
+ * ```cpp
  * try {
+ *     Connection con = pool.getConnection();
  *     con.beginTransaction();
  *     con.execute("UPDATE accounts SET balance = balance - ? WHERE id = ?", 100.0, 1);
  *     con.execute("UPDATE accounts SET balance = balance + ? WHERE id = ?", 100.0, 2);
  *     con.commit();
  *     std::cout << "Transfer successful" << std::endl;
- * } catch (const zdb::sql_exception& e) {
- *     con.rollback();
- *     std::cerr << "Transaction failed: " << e.what() << std::endl;
+ *     // Connection is automatically returned to pool when it goes out of scope
+ *     // If an exception occurred before commit, it will automatically rollback
+ * } catch (const sql_exception& e) {
+ *     std::cerr << "Operation failed: " << e.what() << std::endl;
  * }
  * ```
  *
@@ -388,6 +393,9 @@ namespace zdb {
          */
         ~URL() { if (t_) URL_free(&t_); }
         
+        /// @name Properties
+        /// @{
+
         /**
          * @brief Gets the protocol of the URL.
          * @return The protocol name.
@@ -431,12 +439,6 @@ namespace zdb {
         [[nodiscard]] constexpr std::optional<std::string_view> queryString() const noexcept { return _to_optional(URL_getQueryString(t_)); }
         
         /**
-         * @brief Returns a string representation of this URL object.
-         * @return The URL string.
-         */
-        [[nodiscard]] constexpr std::string_view toString() const noexcept { return URL_toString(t_); }
-        
-        /**
          * @brief Gets the names of parameters contained in this URL.
          * @return A vector of parameter names, or an empty vector if no parameters.
          */
@@ -460,6 +462,18 @@ namespace zdb {
             return _to_optional(URL_getParameter(t_, name.c_str()));
         }
         
+        /// @}
+        /// @name Functions
+        /// @{
+
+        /**
+         * @brief Returns a string representation of this URL object.
+         * @return The URL string.
+         */
+        [[nodiscard]] constexpr std::string_view toString() const noexcept { return URL_toString(t_); }
+        
+        /// @}
+
         /**
          * @brief Cast operator to URL_T.
          * @return The internal URL_T representation.
@@ -590,6 +604,9 @@ namespace zdb {
          */
         operator ResultSet_T() noexcept { return t_; }
         
+        /// @name Properties
+        /// @{
+
         /**
          * @brief Gets the number of columns in this ResultSet.
          * @return The number of columns.
@@ -642,6 +659,10 @@ namespace zdb {
          */
         [[nodiscard]] int getFetchSize() const noexcept { return ResultSet_getFetchSize(t_); }
         
+        /// @}
+        /// @name Functions
+        /// @{
+
         /**
          * @brief Moves the cursor to the next row.
          *
@@ -656,6 +677,10 @@ namespace zdb {
          */
         bool next() { except_wrapper(RETURN ResultSet_next(t_)); }
         
+        /// @}
+        /// @name Columns
+        /// @{
+
         /**
          * @brief Checks if the designated column's value is SQL NULL.
          *
@@ -798,6 +823,10 @@ namespace zdb {
             return std::span<const std::byte>(static_cast<const std::byte*>(blob), size);
         }
 
+        /// @}
+        /// @name Date and Time
+        /// @{
+
         /**
          * @brief Gets the designated column's value as a Unix timestamp.
          *
@@ -919,7 +948,9 @@ namespace zdb {
         [[nodiscard]] tm getDateTime(const std::string& columnName) {
             except_wrapper(RETURN ResultSet_getDateTimeByName(t_, columnName.c_str()));
         }
-        
+
+        /// @}
+
     protected:
         friend class PreparedStatement;
         friend class Connection;
@@ -1064,6 +1095,9 @@ namespace zdb {
          */
         operator PreparedStatement_T() const noexcept { return t_; }
         
+        /// @name Parameters
+        /// @{
+
         /**
          * @brief Binds a value to the prepared statement.
          *
@@ -1129,6 +1163,10 @@ namespace zdb {
             bindValuesHelper(1, std::forward<Args>(args)...);
         }
         
+        /// @}
+        /// @name Functions
+        /// @{
+
         /**
          * @brief Executes the prepared SQL statement.
          * @throws sql_exception If a database access error occurs
@@ -1150,6 +1188,10 @@ namespace zdb {
             return PreparedStatement_rowsChanged(t_);
         }
         
+        /// @}
+        /// @name Properties
+        /// @{
+
         /**
          * @brief Gets the number of parameters in the prepared statement.
          * @return The number of _in_ parameters in this prepared statement
@@ -1158,6 +1200,8 @@ namespace zdb {
             return PreparedStatement_getParameterCount(t_);
         }
         
+        /// @}
+
     protected:
         friend class Connection;
         
@@ -1245,16 +1289,17 @@ namespace zdb {
      * @endcode
      *
      * ### Transaction Example
+     *
      * @code
-     * Connection con = pool.getConnection();
      * try {
+     *     Connection con = pool.getConnection();
      *     con.beginTransaction();
      *     con.execute("UPDATE accounts SET balance = balance - ? WHERE id = ?", 100.0, 1);
      *     con.execute("UPDATE accounts SET balance = balance + ? WHERE id = ?", 100.0, 2);
      *     con.commit();
      *     std::cout << "Transfer successful" << std::endl;
      * } catch (const sql_exception& e) {
-     *     con.rollback();
+     *     // See note below why we don't have to explicit call rollback here
      *     std::cerr << "Transfer failed: " << e.what() << std::endl;
      * }
      * @endcode
@@ -1263,14 +1308,18 @@ namespace zdb {
      * @code
      * Connection con = pool.getConnection();
      * auto stmt = con.prepareStatement("INSERT INTO logs (message, timestamp) VALUES (?, ?)");
-     * stmt.bind(1, "User logged in");
-     * stmt.bind(2, std::time(nullptr));
+     * stmt.bindValues("User logged in", std::time(nullptr));
      * stmt.execute();
      * std::cout << "Rows affected: " << stmt.rowsChanged() << std::endl;
      * @endcode
      *
      * _A Connection is reentrant, but not thread-safe and should only be used by one
      * thread at a time._
+     *
+     * @note When a Connection object goes out of scope, it is automatically
+     * returned to the pool. If the connection is still in a transaction at
+     * this point, the transaction will be automatically rolled back, ensuring
+     * data integrity even in the face of exceptions.
      *
      * @warning Connection objects are internally managed by the ConnectionPool that
      * created them and are not copyable or movable. Always ensure that the originating
@@ -1294,6 +1343,9 @@ namespace zdb {
          */
         operator Connection_T() const noexcept { return t_; }
         
+        /// @name Properties
+        /// @{
+
         /**
          * @brief Sets the query timeout for this Connection.
          *
@@ -1345,6 +1397,10 @@ namespace zdb {
          */
         [[nodiscard]] int getFetchSize() noexcept { return Connection_getFetchSize(t_); }
         
+        /// @}
+        /// @name Functions
+        /// @{
+
         /**
          * @brief Pings the database server to check if the connection is alive.
          * @return True if the connection is alive, false otherwise.
@@ -1533,6 +1589,8 @@ namespace zdb {
         [[nodiscard]] std::optional<std::string_view> getLastError() const noexcept {
             return _to_optional(Connection_getLastError(t_));
         }
+
+        /// @}
         
         /**
          * @brief Checks if the specified database system is supported.
@@ -1542,7 +1600,7 @@ namespace zdb {
         [[nodiscard]] static bool isSupported(const std::string& url) noexcept {
             return Connection_isSupported(url.c_str());
         }
-        
+
     protected:
         friend class ConnectionPool;
         
@@ -1716,6 +1774,9 @@ namespace zdb {
          */
         operator ConnectionPool_T() noexcept { return t_; }
         
+        /// @name Properties
+        /// @{
+
         /**
          * @brief Gets the URL of the connection pool.
          * @return The URL of the connection pool.
@@ -1821,6 +1882,8 @@ namespace zdb {
             ConnectionPool_setReaper(t_, sweepInterval);
         }
         
+        /// @}
+        
         /**
          * @brief Gets the current number of connections in the pool.
          * @return The total number of connections in the pool.
@@ -1907,6 +1970,11 @@ namespace zdb {
         
         /**
          * @brief Returns a connection to the pool.
+         *
+         * The same as calling Connection::close() on a connection. If the connection
+         * is in an uncommitted transaction, rollback is called. It is an unchecked
+         * error to attempt to use the Connection after this method is called.
+         *
          * @param con The Connection to return.
          */
         void returnConnection(Connection& con) noexcept { con.close(); }
@@ -1918,15 +1986,7 @@ namespace zdb {
         int reapConnections() noexcept {
             return ConnectionPool_reapConnections(t_);
         }
-        
-        /**
-         * @brief Gets the library version information.
-         * @return The version information as a string view.
-         */
-        [[nodiscard]] static std::string_view version() noexcept {
-            return ConnectionPool_version();
-        }
-        
+                
     private:
         URL url_;
         ConnectionPool_T t_;
