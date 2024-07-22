@@ -30,135 +30,193 @@
 #include <stdexcept>
 #include <ctime>
 #include <type_traits>
-#include <cstdint>
 #include <optional>
-#include <memory>
 #include <span>
 #include <variant>
 #include <concepts>
 #include <ranges>
+#include <functional>
+#include <vector>
+#include <unordered_map>
 
-/*
-# zdbpp.h - C++ Interface for libzdb
- 
- Libzdb as a small, easy to use Open Source Database Connection Pool Library
- with the following features:
- 
- - Thread safe Database Connection Pool
- - Connect to multiple database systems simultaneously
- - Zero runtime configuration, connect using a URL scheme
- - Supports MySQL, PostgreSQL, SQLite and Oracle
-
-This interface provides a C++ wrapper for libzdb and offers a convenient and
-type-safe way to interact with various SQL databases from C++ applications.
-
-## Features
- 
- - Object-oriented wrapper around libzdb
- - Exception-based error handling
- - RAII-compliant resource management
- - Type-safe parameter binding for prepared statements
- - Connection pooling
- - Thread-safe design
- - Modern C++ features (C++20 or later required)
- 
-## Usage
-
-To use libzdb in your C++ project, include zdbpp.h and use the `zdb` namespace:
-
-```cpp
- #include <zdbpp.h>
- using namespace zdb;
-```
-
-## Examples
-
-### Query Execution
-
-```cpp
- ConnectionPool pool("mysql://192.168.11.100:3306/test?user=root&password=dba");
- pool.start();
- Connection con = pool.getConnection();
- 
- // Use C++ variadic template feature to bind parameters
- ResultSet result = con.executeQuery(
-     "SELECT id, name, hired, image FROM employee WHERE id < ? ORDER BY id", 100
- );
- 
- // Optionally set row prefetch, default is 100
- result.setFetchSize(10);
- 
- while (result.next()) {
-     int id = result.getInt("id");
-     auto name = result.getString("name").value_or("N/A");
-     auto hired = result.getTimestamp("hired");
-     auto blob = result.getBlob("image");
-     // ...
- }
-```
-
-### Execute Statement
-
-```cpp
-Connection con = pool.getConnection();
-// Any execute or executeQuery statement which takes parameters are
-// automatically translated into a prepared statement. Here we also
-// demonstrate how to set a SQL null value by using nullptr
-con.execute("UPDATE employee SET image = ? WHERE id = ?", nullptr, 11);
-```
-
-### Test for SQL NULL Value
-
-```cpp
-ResultSet result = con.executeQuery("SELECT name, image FROM employee");
-while (result.next()) {
-    if (result.isNull("image")) {
-        // Handle NULL image...
-    }
-}
-```
-
-### Insert Data via Prepared Statement
-
-```cpp
-Connection con = pool.getConnection();
-PreparedStatement prep = con.prepareStatement(
-    "INSERT INTO employee (name, hired, image) VALUES (?, ?, ?)"
-);
-
-con.beginTransaction();
-for (const auto &employee : employees) {
-    prep.bindValues(employee.name, employee.hired, employee.image);
-    prep.execute();
-}
-con.commit();
-```
-
-### Exception Handling
-
-```cpp
-try {
-    Connection con = pool.getConnection();
-    con.executeQuery("INVALID QUERY");
-} catch (const sql_exception& e) {
-    std::cout << "SQL error: " << e.what() << std::endl;
-}
-```
-
-## Key Classes
-
-- `URL`: Represents a database connection URL
-- `ResultSet`: Represents a database result set
-- `PreparedStatement`: Represents a pre-compiled SQL statement
-- `Connection`: Represents a database connection
-- `ConnectionPool`: Manages a pool of database connections
-
-For detailed API documentation, refer to the comments for each class in this header file.
-Visit [libzd's homepage](https://www.tildeslash.com/libzdb/) for documentation and examples.
-*/
-
+/**
+ *
+ * ### zdbpp.h - C++ Interface for libzdb
+ *
+ * <center><img src="database++.png" class="resp-img" style="width:700px"></center>
+ *
+ * This interface provides a C++ wrapper for libzdb, offering a convenient and 
+ * type-safe way to interact with various SQL databases from C++ applications.
+ *
+ * ## Features
+ *
+ * - Thread-safe Database Connection Pool
+ * - Connect to multiple database systems simultaneously
+ * - Zero runtime configuration, connect using a URL scheme
+ * - Supports MySQL, PostgreSQL, SQLite, and Oracle
+ * - Modern C++ features (C++20 or later required)
+ *
+ * ## Core Concepts
+ *
+ * The central class in this library is `ConnectionPool`, which manages database
+ * connections. All other main classes (`Connection`, `PreparedStatement`, and
+ * `ResultSet`) are obtained through the `ConnectionPool` or its derivatives.
+ *
+ * ### ConnectionPool and URL
+ *
+ * The `ConnectionPool` is initialized with a `URL` object, which specifies the
+ * database connection details:
+ *
+ * ```cpp
+ * zdb::URL url("mysql://localhost:3306/mydb?user=root&password=secret");
+ * zdb::ConnectionPool pool(url);
+ * pool.start();
+ * ```
+ *
+ * A ConnectionPool is neither copyable or movable. It is designed to be a long-lived
+ * object that manages database connections throughout the lifetime of your application.
+ * Typically, you would instantiate one or more ConnectionPool objects as part of a
+ * resource management class or in the global scope of your application.
+ *
+ * ### Best Practices for Using ConnectionPool
+ *
+ * 1. Create ConnectionPool instances at application startup.
+ * 2. Maintain these instances for the entire duration of your application's runtime.
+ * 3. Use a single ConnectionPool for each distinct database you need to connect to.
+ * 4. Consider wrapping ConnectionPool instances in a singleton or dependency
+ *    injection pattern for easy access across your application.
+ * 5. Ensure proper shutdown of ConnectionPool instances when your application
+ *    terminates to release all database resources cleanly.
+ *
+ * Example of a global ConnectionPool manager:
+ *
+ * ```cpp
+ * class DatabaseManager {
+ * public:
+ *     static ConnectionPool& getMainPool() {
+ *         static ConnectionPool mainPool("mysql://localhost/maindb?user=root&password=pass");
+ *         return mainPool;
+ *     }
+ *
+ *     static ConnectionPool& getAnalyticsPool() {
+ *         static ConnectionPool analyticsPool("postgresql://analyst:pass@192.168.8.217/datawarehouse");
+ *         return analyticsPool;
+ *     }
+ *
+ *     static void initialize() {
+ *         static std::once_flag initFlag;
+ *         std::call_once(initFlag, []() {
+ *             // Configure and start main pool
+ *             ConnectionPool& main = getMainPool();
+ *             main.setInitialConnections(5);  // Example value
+ *             main.setMaxConnections(20);     // Example value
+ *             main.setConnectionTimeout(30);  // 30 seconds timeout
+ *             main.start();
+ *
+ *             // Configure and start analytics pool
+ *             ConnectionPool& analytics = getAnalyticsPool();
+ *             analytics.setInitialConnections(2);
+ *             analytics.setMaxConnections(10);
+ *             analytics.start();
+ *         });
+ *     }
+ *
+ *     static void shutdown() {
+ *         getMainPool().stop();
+ *         getAnalyticsPool().stop();
+ *     }
+ * };
+ * ```
+ *
+ * ## Usage Examples
+ *
+ * ### Basic Query Execution
+ *
+ * ```cpp
+ * auto& pool = DatabaseManager::getMainPool();
+ * auto con = pool.getConnection();
+ *
+ * ResultSet result = con.executeQuery("SELECT name, age FROM users WHERE id = ?", 1);
+ * if (result.next()) {
+ *     std::cout << "Name: " << result.getString("name").value_or("N/A")
+ *               << ", Age: " << result.getInt("age") << std::endl;
+ * }
+ * ```
+ *
+ * ### Using PreparedStatement
+ *
+ * ```cpp
+ * auto& pool = DatabaseManager::getAnalyticsPool();
+ * auto con = pool.getConnection();
+ *
+ * auto stmt = con.prepareStatement("INSERT INTO logs (message, timestamp) VALUES (?, ?)");
+ * stmt.bindValues("User logged in", std::time(nullptr));
+ * stmt.execute();
+ * ```
+ *
+ * ### Transaction Example
+ *
+ * ```cpp
+ * auto con = pool.getConnection();
+ *
+ * try {
+ *     con.beginTransaction();
+ *     con.execute("UPDATE accounts SET balance = balance - ? WHERE id = ?", 100.0, 1);
+ *     con.execute("UPDATE accounts SET balance = balance + ? WHERE id = ?", 100.0, 2);
+ *     con.commit();
+ *     std::cout << "Transfer successful" << std::endl;
+ * } catch (const zdb::sql_exception& e) {
+ *     con.rollback();
+ *     std::cerr << "Transaction failed: " << e.what() << std::endl;
+ * }
+ * ```
+ *
+ * ## Exception Handling
+ *
+ * All database-related errors are thrown as `sql_exception`, which derives from
+ * `std::runtime_error`.
+ *
+ * ### Example of Exception Handling
+ *
+ * ```cpp
+ * try {
+ *     auto con = pool.getConnection();
+ *     con.execute("INSERT INTO users (name, email) VALUES (?, ?)", "John Doe", "john@example.com");
+ * } catch (const zdb::sql_exception& e) {
+ *     std::cerr << "Database error occurred: " << e.what() << std::endl;
+ *     // Handle the error appropriately
+ * }
+ * ```
+ * Key points about exception handling in this library:
+ *
+ * 1. All database operations that can fail will throw `sql_exception`.
+ * 2. `sql_exception` provides informative error messages through its `what()` method.
+ * 3. You should wrap database operations in try-catch blocks to handle potential errors gracefully.
+ * 4. The library ensures that resources are properly managed even when exceptions are thrown, preventing resource leaks.
+ *
+ *
+ * @note For detailed API documentation, refer to the comments for each class in this header file.
+ * Visit [libzdb's homepage](https://www.tildeslash.com/libzdb/) for additional documentation and examples.
+ * @file
+ */
 namespace zdb {
+    namespace version {
+        constexpr int major = LIBZDB_MAJOR;
+        constexpr int minor = LIBZDB_MINOR;
+        constexpr int revision = LIBZDB_REVISION;
+        
+        constexpr int number = LIBZDB_VERSION_NUMBER;
+        constexpr std::string_view string = LIBZDB_VERSION;
+        
+        constexpr bool is_compatible_with(int required_major, int required_minor, int required_revision = 0) {
+            return (major > required_major) ||
+            (major == required_major && minor > required_minor) ||
+            (major == required_major && minor == required_minor && revision >= required_revision);
+        }
+    } // version
+    
     namespace { // private
+        // @cond hide
         #define except_wrapper(f) TRY { f; } ELSE { throw sql_exception(Exception_frame.message); } END_TRY
         
         constexpr std::optional<std::string_view> _to_optional(const char* str) noexcept {
@@ -172,7 +230,7 @@ namespace zdb {
                 g_abortHandler(error);
             }
         }
-
+        
         struct noncopyable {
             noncopyable() = default;
             noncopyable(const noncopyable&) = delete;
@@ -182,6 +240,9 @@ namespace zdb {
         };
         
         template<typename T>
+        inline constexpr bool always_false = false;
+        
+        template<typename T>
         concept Stringable = std::convertible_to<T, std::string_view>;
         
         template<typename T>
@@ -189,11 +250,11 @@ namespace zdb {
         
         template<typename T>
         concept Blobable = std::ranges::contiguous_range<T> && std::same_as<std::ranges::range_value_t<T>, std::byte>;
+        // @endcond
     } // anonymous namespace
     
     
     /**
-     * @class sql_exception
      * @brief Exception class for SQL related errors.
      *
      * Thrown for SQL errors. Inherits from `std::runtime_error`.
@@ -215,19 +276,60 @@ namespace zdb {
          */
         explicit sql_exception(const char* msg = "SQLException") : std::runtime_error(msg) {}
     };
-
+    
     
     /**
      * @class URL
      * @brief Represents an immutable Uniform Resource Locator.
      *
-     * Example: `postgresql://user:password@example.com:5432/database?use-ssl=true`
-     * Supports IPv6 as defined in RFC2732.
+     * A Uniform Resource Locator (URL), is used to uniquely identify a
+     * resource on the Internet. The URL is a compact text string with a
+     * restricted syntax that consists of four main components:
+     *
+     * ```
+     * protocol://<authority><path><query>
+     * ```
+     *
+     * The `protocol` part is mandatory, the other components may or may not
+     * be present in an URL string. For instance the `file` protocol only use
+     * the path component while a `http` protocol may use all components.
+     *
+     * The following URL components are automatically unescaped according to the escaping
+     * mechanism defined in RFC 2396; `credentials`, `path` and parameter
+     * `values`. If you use a password with non-URL safe characters, you must URL
+     * escape the value.
+     *
+     * An <em>IPv6 address</em> can be used for host as defined in
+     * <a href="https://www.ietf.org/rfc/rfc2732.txt">RFC2732</a> by enclosing the
+     * address in [brackets]. For instance,
+     * `mysql://[2010:836B:4179::836B:4179]:3306/test`
+     *
+     * For more information about the URL syntax and specification, see,
+     * <a href="https://www.ietf.org/rfc/rfc2396.txt">RFC2396 -
+     * Uniform Resource Identifiers (URI): Generic Syntax</a>
+     *
+     * ### Example:
+     *
+     * @code
+     * URL url("postgresql://user:password@example.com:5432/database?use-ssl=true");
+     *
+     * // Retrieve and print various components of the URL
+     * std::cout << "Protocol: " << url.protocol() << std::endl;
+     * std::cout << "Host: " << url.host().value_or("Not specified") << std::endl;
+     * std::cout << "Port: " << url.port() << std::endl;
+     * std::cout << "User: " << url.user().value_or("Not specified") << std::endl;
+     * std::cout << "Password: " << (url.password().has_value() ? "Specified" : "Not specified") << std::endl;
+     * std::cout << "Path: " << url.path().value_or("Not specified") << std::endl;
+     *
+     * // Get a specific parameter value
+     * auto use_ssl = url.parameter("use-ssl").value_or("false");
+     * std::cout << "SSL Enabled: " << (use_ssl == "true") << std::endl;
+     * @endcode
      */
     class URL {
     public:
         /**
-         * @brief Create a new URL object from the URL parameter string.
+         * @brief Creates a new URL object from the given URL string.
          * @param url A string specifying the URL.
          * @throws sql_exception if the URL cannot be parsed.
          */
@@ -238,6 +340,7 @@ namespace zdb {
         /**
          * @brief Copy constructor.
          * @param r URL object to copy.
+         * @private
          */
         URL(const URL& r) : t_(URL_new(URL_toString(r.t_))) {
             if (!t_) throw sql_exception("Failed to copy URL");
@@ -246,6 +349,7 @@ namespace zdb {
         /**
          * @brief Move constructor.
          * @param r URL object to move.
+         * @private
          */
         URL(URL&& r) noexcept : t_(r.t_) {
             r.t_ = nullptr;
@@ -254,6 +358,7 @@ namespace zdb {
         /**
          * @brief Copy assignment operator.
          * @param r URL object to copy assign.
+         * @private
          */
         URL& operator=(const URL& r) {
             if (this != &r) {
@@ -266,6 +371,7 @@ namespace zdb {
         /**
          * @brief Move assignment operator.
          * @param r URL object to move assign.
+         * @private
          */
         URL& operator=(URL&& r) noexcept {
             if (this != &r) {
@@ -275,56 +381,52 @@ namespace zdb {
             }
             return *this;
         }
-
+        
         /**
          * @brief Destroy the URL object.
+         * @private
          */
         ~URL() { if (t_) URL_free(&t_); }
         
         /**
-         * @brief Get the protocol of the URL.
+         * @brief Gets the protocol of the URL.
          * @return The protocol name.
          */
         [[nodiscard]] constexpr std::string_view protocol() const noexcept { return URL_getProtocol(t_); }
         
         /**
-         * @brief Get the user name from the authority part of the URL.
-         * @return An optional containing the username specified in the URL,
-         * or std::nullopt if not found.
+         * @brief Gets the username from the URL's authority part.
+         * @return An optional containing the username or std::nullopt if not found.
          */
         [[nodiscard]] constexpr std::optional<std::string_view> user() const noexcept { return _to_optional(URL_getUser(t_)); }
         
         /**
-         * @brief Get the password from the authority part of the URL.
-         * @return An optional containing the password specified in the URL,
-         * or std::nullopt if not found.
+         * @brief Gets the password from the URL's authority part.
+         * @return An optional containing the password or std::nullopt if not found.
          */
         [[nodiscard]] constexpr std::optional<std::string_view> password() const noexcept { return _to_optional(URL_getPassword(t_)); }
         
         /**
-         * @brief Get the hostname of the URL.
-         * @return An optional containing the hostname specified in the URL,
-         * or std::nullopt if not found.
+         * @brief Gets the hostname of the URL.
+         * @return An optional containing the hostname or std::nullopt if not found.
          */
         [[nodiscard]] constexpr std::optional<std::string_view> host() const noexcept { return _to_optional(URL_getHost(t_)); }
         
         /**
-         * @brief Get the port of the URL.
+         * @brief Gets the port of the URL.
          * @return The port number of the URL or -1 if not specified.
          */
         [[nodiscard]] constexpr int port() const noexcept { return URL_getPort(t_); }
         
         /**
-         * @brief Get the path of the URL.
-         * @return An optional containing the path of the URL,
-         * or std::nullopt if not found.
+         * @brief Gets the path of the URL.
+         * @return An optional containing the path or std::nullopt if not found.
          */
         [[nodiscard]] constexpr std::optional<std::string_view> path() const noexcept { return _to_optional(URL_getPath(t_)); }
         
         /**
-         * @brief Get the query string of the URL.
-         * @return An optional containing the query string of the URL,
-         * or std::nullopt if not found.
+         * @brief Gets the query string of the URL.
+         * @return An optional containing the query string or std::nullopt if not found.
          */
         [[nodiscard]] constexpr std::optional<std::string_view> queryString() const noexcept { return _to_optional(URL_getQueryString(t_)); }
         
@@ -335,10 +437,8 @@ namespace zdb {
         [[nodiscard]] constexpr std::string_view toString() const noexcept { return URL_toString(t_); }
         
         /**
-         * @brief Returns a vector of string objects with the names of the
-         * parameters contained in this URL.
-         * @return A vector of strings, each string containing the name of a URL parameter; or
-         *         an empty vector if the URL has no parameters.
+         * @brief Gets the names of parameters contained in this URL.
+         * @return A vector of parameter names, or an empty vector if no parameters.
          */
         [[nodiscard]] std::vector<std::string_view> parameterNames() const noexcept {
             std::vector<std::string_view> names;
@@ -352,7 +452,7 @@ namespace zdb {
         }
         
         /**
-         * @brief Get the value of the specified URL parameter.
+         * @brief Gets the value of the specified URL parameter.
          * @param name The parameter name to lookup.
          * @return An optional containing the parameter value, or std::nullopt if not found.
          */
@@ -363,6 +463,7 @@ namespace zdb {
         /**
          * @brief Cast operator to URL_T.
          * @return The internal URL_T representation.
+         * @private
          */
         operator URL_T() const noexcept { return t_; }
         
@@ -375,50 +476,143 @@ namespace zdb {
      * @class ResultSet
      * @brief Represents a database result set.
      *
-     * Created by executing a SQL SELECT statement using either Connection::executeQuery() or
-     * PreparedStatement::executeQuery(). Maintains a cursor pointing to its current row of data.
-     * Example:
+     * A ResultSet is created by executing a SQL SELECT statement using
+     * Connection::executeQuery().
+     *
+     * A ResultSet maintains a cursor pointing to its current row of data.
+     * Initially, the cursor is positioned before the first row.
+     * ResultSet::next() moves the cursor to the next row, and because
+     * it returns false when there are no more rows, it can be used in a while
+     * loop to iterate through the result set. A ResultSet is not updatable and
+     * has a cursor that moves forward only. Thus, you can iterate through it
+     * only once and only from the first row to the last row.
+     *
+     * The ResultSet class provides getter methods for retrieving
+     * column values from the current row. Values can be retrieved using
+     * either the index number of the column or the name of the column. In
+     * general, using the column index will be more efficient. _Columns are
+     * numbered from 1._
+     *
+     * Column names used as input to getter methods are case sensitive.
+     * When a getter method is called with a column name and several
+     * columns have the same name, the value of the first matching column
+     * will be returned. The column name option is designed to be used
+     * when column names are used in the SQL query that generated the
+     * result set. For columns that are NOT explicitly named in the query,
+     * it is best to use column indices.
+     *
+     * ## Examples
+     *
+     * The following examples demonstrate how to obtain a ResultSet and
+     * how to retrieve values from it.
+     *
+     * ### Example: Using column names
+     *
+     * In this example, columns are named in the SELECT statement, and we retrieve
+     * values using the column names (we could of course also use indices if we
+     * want):
+     *
      * @code
-     * ResultSet result = con.executeQuery("SELECT ssn, name, picture FROM employees");
+     * Connection con = pool.getConnection();
+     * ResultSet result = con.executeQuery("SELECT ssn, name, photo FROM employees");
      * while (result.next()) {
      *     int ssn = result.getInt("ssn");
      *     auto name = result.getString("name");
-     *     auto blob = result.getBlob("picture");
-     *     // ...
+     *     auto photo = result.getBlob("photo");
+     *     if (photo) {
+     *         // Process photo data
+     *     }
+     *     // Process other data...
      * }
      * @endcode
+     *
+     * ### Example: Using column indices
+     *
+     * This example demonstrates selecting a generated result and printing it.
+     * When the SELECT statement doesn't name the column, we use the column
+     * index to retrieve the value:
+     *
+     * @code
+     * Connection con = pool.getConnection();
+     * ResultSet r = con.executeQuery("SELECT COUNT(*) FROM employees");
+     * if (r.next()) {
+     *     std::cout << "Number of employees: "
+     *               << r.getString(1).value_or("none")
+     *               << std::endl;
+     * } else {
+     *     std::cout << "No results returned" << std::endl;
+     * }
+     * @endcode
+     *
+     * ## Automatic type conversions
+     *
+     * A ResultSet stores values internally as bytes and converts values
+     * on-the-fly to numeric types when requested, such as when getInt()
+     * or one of the other numeric get-methods are called. In the above example,
+     * even if *count(\*)* returns a numeric value, we can use getString()
+     * to get the number as a string or if we choose, we can use getInt()
+     * to get the value as an integer. In the latter case, note that if the column
+     * value cannot be converted to a number, an sql_exception is thrown.
+     *
+     * ## Date and Time
+     *
+     * ResultSet provides two principal methods for retrieving temporal column
+     * values as C types. getTimestamp() converts a SQL timestamp value
+     * to a `time_t` and getDateTime() returns a `tm structure` representing
+     * a Date, Time, DateTime, or Timestamp column type. To get a temporal column
+     * value as a string, simply use getString()
+     *
+     * *A ResultSet is reentrant, but not thread-safe and should only be used by
+     * one thread (at a time).*
+     *
+     * @note Remember that column indices in ResultSet are 1-based, not 0-based.
+     *
+     * @warning ResultSet objects are internally managed by the Connection that
+     * created them and are not copyable or movable. Always ensure that the originating
+     * Connection object remains valid for the entire duration of the ResultSet's
+     * use. Basically, keep the Connection and ResultSet objects in the same scope.
+     * Do not attempt to use ResultSet objects (including through references or
+     * pointers) after their Connection has been closed and returned to the pool.
      */
     class ResultSet : private noncopyable {
     public:
         /**
          * @brief Move constructor.
          * @param r ResultSet object to move.
+         * @private
          */
         ResultSet(ResultSet&& r) noexcept : t_(r.t_) { r.t_ = nullptr; }
         
         /**
          * @brief Conversion operator to ResultSet_T.
          * @return The underlying ResultSet_T.
+         * @private
          */
         operator ResultSet_T() noexcept { return t_; }
         
         /**
-         * @brief Returns the number of columns in this ResultSet object.
+         * @brief Gets the number of columns in this ResultSet.
          * @return The number of columns.
          */
         [[nodiscard]] int columnCount() const noexcept { return ResultSet_getColumnCount(t_); }
         
         /**
-         * @brief Get the designated column's name.
+         * @brief Gets the designated column's name.
          * @param columnIndex The first column is 1, the second is 2, ...
-         * @return An optional containing the Column name, or std::nullopt if the column does not exist.
+         * @return An optional containing the Column name, or std::nullopt if not found.
          */
         [[nodiscard]] std::optional<std::string_view> columnName(int columnIndex) const noexcept {
             return _to_optional(ResultSet_getColumnName(t_, columnIndex));
         }
         
         /**
-         * @brief Returns column size in bytes.
+         * @brief Gets the size of a column in bytes.
+         *
+         * If the column is a blob then this method returns the number of bytes
+         * in that blob. No type conversions occur. If the result is a string
+         * (or a number since a number can be converted into a string) then return
+         * the number of bytes in the resulting string.
+         *
          * @param columnIndex The first column is 1, the second is 2, ...
          * @return Column data size.
          * @throws sql_exception If columnIndex is outside the valid range.
@@ -428,46 +622,74 @@ namespace zdb {
         }
         
         /**
-         * @brief Specify the number of rows that should be fetched from the database when more rows are needed.
-         * @param prefetch_rows The number of rows to fetch (1..INT_MAX).
+         * @brief Sets the number of rows to fetch from the database.
+         *
+         * ResultSet will prefetch rows in batches of number of `rows` when next()
+         * is called to reduce the network roundtrip to the database. This method
+         * is only applicable to MySQL and Oracle.
+         *
+         * @param rows The number of rows to fetch (1..INT_MAX).
          */
         void setFetchSize(int rows) noexcept { ResultSet_setFetchSize(t_, rows); }
         
         /**
-         * @brief Get the number of rows that should be fetched from the database when more rows are needed.
+         * @brief Gets the number of rows to fetch from the database.
+         *
+         * Unless previously set with setFetchSize(), the returned value
+         * is the same as returned by Connection::getFetchSize()
+         
          * @return The number of rows to fetch or 0 if N/A.
          */
         [[nodiscard]] int getFetchSize() const noexcept { return ResultSet_getFetchSize(t_); }
         
         /**
-         * @brief Moves the cursor down one row from its current position.
+         * @brief Moves the cursor to the next row.
+         *
+         * A ResultSet cursor is initially positioned before the first row; the
+         * first call to this method makes the first row the current row; the
+         * second call makes the second row the current row, and so on. When
+         * there are no more available rows false is returned. An empty
+         * ResultSet will return false on the first call to ResultSet::next().
+         *
          * @return true if the new current row is valid; false if there are no more rows.
          * @throws sql_exception If a database access error occurs.
          */
         bool next() { except_wrapper(RETURN ResultSet_next(t_)); }
         
         /**
-         * @brief Returns true if the value of the designated column in the current row is SQL NULL, otherwise false.
+         * @brief Checks if the designated column's value is SQL NULL.
+         *
+         * A ResultSet returns an optional for reference types and 0 for value types.
+         * Use this method if you need to differentiate between SQL NULL and std::nullopt/0.
+         *
          * @param columnIndex The first column is 1, the second is 2, ...
          * @return True if column value is SQL NULL, otherwise false.
-         * @throws sql_exception If a database access error occurs or columnIndex is outside the valid range.
+         * @throws sql_exception If a database access error occurs or columnIndex is invalid.
          */
         [[nodiscard]] bool isNull(int columnIndex) {
             except_wrapper(RETURN ResultSet_isnull(t_, columnIndex));
         }
         
         /**
-         * @brief Retrieves the value of the designated column as a string.
+         * @brief Gets the designated column's value as a string.
+         *
+         * _The returned string may only be valid until the next call to next()
+         * and if you plan to use the returned value longer, you must make a copy._
+         *
          * @param columnIndex The first column is 1, the second is 2, ...
          * @return An optional containing the column value, or std::nullopt if NULL.
-         * @throws sql_exception If a database access error occurs or columnIndex is outside the valid range.
+         * @throws sql_exception If a database access error occurs or columnIndex is invalid.
          */
         [[nodiscard]] std::optional<std::string_view> getString(int columnIndex) {
             except_wrapper(RETURN _to_optional(ResultSet_getString(t_, columnIndex)));
         }
         
         /**
-         * @brief Retrieves the value of the designated column as a string.
+         * @brief Gets the designated column's value as a string.
+         *
+         * _The returned string may only be valid until the next call to next()
+         * and if you plan to use the returned value longer, you must make a copy._
+         *
          * @param columnName The SQL name of the column. case-sensitive.
          * @return An optional containing the column value, or std::nullopt if NULL.
          * @throws sql_exception If a database access error occurs or columnName does not exist.
@@ -477,70 +699,74 @@ namespace zdb {
         }
         
         /**
-         * @brief Retrieves the value of the designated column as an int.
+         * @brief Gets the designated column's value as an int.
          * @param columnIndex The first column is 1, the second is 2, ...
          * @return The column value; if the value is SQL NULL, the value returned is 0.
-         * @throws sql_exception If a database access error occurs, columnIndex is outside the valid range or if the value is NaN.
+         * @throws sql_exception If a database error occurs, columnIndex is invalid or value is NaN.
          */
         [[nodiscard]] int getInt(int columnIndex) {
             except_wrapper(RETURN ResultSet_getInt(t_, columnIndex));
         }
         
         /**
-         * @brief Retrieves the value of the designated column as an int.
+         * @brief Gets the designated column's value as an int.
          * @param columnName The SQL name of the column. case-sensitive.
          * @return The column value; if the value is SQL NULL, the value returned is 0.
-         * @throws sql_exception If a database access error occurs, columnName does not exist or if the value is NaN.
+         * @throws sql_exception If a database error occurs, columnName is invalid or value is NaN.
          */
         [[nodiscard]] int getInt(const std::string& columnName) {
             except_wrapper(RETURN ResultSet_getIntByName(t_, columnName.c_str()));
         }
         
         /**
-         * @brief Retrieves the value of the designated column as a long long.
+         * @brief Gets the designated column's value as a long long.
          * @param columnIndex The first column is 1, the second is 2, ...
          * @return The column value; if the value is SQL NULL, the value returned is 0.
-         * @throws sql_exception If a database access error occurs, columnIndex is outside the valid range or if the value is NaN.
+         * @throws sql_exception If a database error occurs, columnIndex is invalid or value is NaN.
          */
         [[nodiscard]] long long getLLong(int columnIndex) {
             except_wrapper(RETURN ResultSet_getLLong(t_, columnIndex));
         }
         
         /**
-         * @brief Retrieves the value of the designated column as a long long.
+         * @brief Gets the designated column's value as a long long.
          * @param columnName The SQL name of the column. case-sensitive.
          * @return The column value; if the value is SQL NULL, the value returned is 0.
-         * @throws sql_exception If a database access error occurs, columnName does not exist or if the value is NaN.
+         * @throws sql_exception If a database error occurs, columnName is invalid or value is NaN.
          */
         [[nodiscard]] long long getLLong(const std::string& columnName) {
             except_wrapper(RETURN ResultSet_getLLongByName(t_, columnName.c_str()));
         }
         
         /**
-         * @brief Retrieves the value of the designated column as a double.
+         * @brief Gets the designated column's value as a double.
          * @param columnIndex The first column is 1, the second is 2, ...
          * @return The column value; if the value is SQL NULL, the value returned is 0.0.
-         * @throws sql_exception If a database access error occurs, columnIndex is outside the valid range or if the value is NaN.
+         * @throws sql_exception If a database error occurs, columnIndex is invalid or value is NaN.
          */
         [[nodiscard]] double getDouble(int columnIndex) {
             except_wrapper(RETURN ResultSet_getDouble(t_, columnIndex));
         }
         
         /**
-         * @brief Retrieves the value of the designated column as a double.
+         * @brief Gets the designated column's value as a double.
          * @param columnName The SQL name of the column. case-sensitive.
          * @return The column value; if the value is SQL NULL, the value returned is 0.0.
-         * @throws sql_exception If a database access error occurs, columnName does not exist or if the value is NaN.
+         * @throws sql_exception If a database error occurs, columnName is invalid or value is NaN.
          */
         [[nodiscard]] double getDouble(const std::string& columnName) {
             except_wrapper(RETURN ResultSet_getDoubleByName(t_, columnName.c_str()));
         }
         
         /**
-         * @brief Retrieves the value of the designated column as a byte span.
+         * @brief Gets the designated column's value as a byte span.
+         *
+         * _The returned blob may only be valid until the next call to next() and
+         * if you plan to use the returned value longer, you must make a copy._
+         *
          * @param columnIndex The first column is 1, the second is 2, ...
-         * @return An optional span of bytes containing the blob data, or std::nullopt if the value is SQL NULL.
-         * @throws sql_exception If a database access error occurs or columnIndex is outside the valid range.
+         * @return An optional span of bytes containing the blob data, or std::nullopt if NULL.
+         * @throws sql_exception If a database access error occurs or columnIndex is invalid.
          */
         [[nodiscard]] std::optional<std::span<const std::byte>> getBlob(int columnIndex) {
             int size = 0;
@@ -551,12 +777,16 @@ namespace zdb {
             }
             return std::span<const std::byte>(static_cast<const std::byte*>(blob), size);
         }
-
+        
         /**
-         * @brief Retrieves the value of the designated column as a byte span.
+         * @brief Gets the designated column's value as a byte span.
+         *
+         * _The returned blob may only be valid until the next call to next() and
+         * if you plan to use the returned value longer, you must make a copy._
+         *
          * @param columnName The SQL name of the column. case-sensitive.
-         * @return An optional span of bytes containing the blob data, or std::nullopt if the value is SQL NULL.
-         * @throws sql_exception If a database access error occurs or columnIndex is outside the valid range.
+         * @return An optional span of bytes containing the blob data, or std::nullopt if NULL.
+         * @throws sql_exception If a database access error occurs or columnName is invalid.
          */
         [[nodiscard]] std::optional<std::span<const std::byte>> getBlob(const std::string& columnName) {
             int size = 0;
@@ -569,7 +799,21 @@ namespace zdb {
         }
 
         /**
-         * @brief Retrieves the value of the designated column as a Unix timestamp.
+         * @brief Gets the designated column's value as a Unix timestamp.
+         *
+         * The returned value is in Coordinated Universal Time (UTC) and represents 
+         * seconds since the **epoch** (January 1, 1970, 00:00:00 GMT).
+         *
+         * Even though the underlying database might support timestamp ranges before
+         * the epoch and after '2038-01-19 03:14:07 UTC' it is safest not to assume or
+         * use values outside this range. Especially on a 32-bit system.
+         *
+         * *SQLite* does not have temporal SQL data types per se
+         * and using this method with SQLite assumes the column value in the Result Set
+         * to be either a numerical value representing a Unix Time in UTC which is
+         * returned as-is or an [ISO 8601](http://en.wikipedia.org/wiki/ISO_8601)
+         * time string which is converted to a `time_t` value.
+         *
          * @param columnIndex The first column is 1, the second is 2, ...
          * @return The column value as seconds since the epoch in the GMT timezone.
          *         If the value is SQL NULL, the value returned is 0.
@@ -581,7 +825,21 @@ namespace zdb {
         }
         
         /**
-         * @brief Retrieves the value of the designated column as a Unix timestamp.
+         * @brief Gets the designated column's value as a Unix timestamp.
+         *
+         * The returned value is in Coordinated Universal Time (UTC) and represents
+         * seconds since the **epoch** (January 1, 1970, 00:00:00 GMT).
+         *
+         * Even though the underlying database might support timestamp ranges before
+         * the epoch and after '2038-01-19 03:14:07 UTC' it is safest not to assume or
+         * use values outside this range. Especially on a 32-bit system.
+         *
+         * *SQLite* does not have temporal SQL data types per se
+         * and using this method with SQLite assumes the column value in the Result Set
+         * to be either a numerical value representing a Unix Time in UTC which is
+         * returned as-is or an [ISO 8601](http://en.wikipedia.org/wiki/ISO_8601)
+         * time string which is converted to a `time_t` value.
+         *
          * @param columnName The SQL name of the column. case-sensitive.
          * @return The column value as seconds since the epoch in the GMT timezone.
          *         If the value is SQL NULL, the value returned is 0.
@@ -593,24 +851,70 @@ namespace zdb {
         }
         
         /**
-         * @brief Retrieves the value of the designated column as a Date, Time or DateTime.
+         * @brief Gets the designated column's value as a Date, Time or DateTime.
+         *
+         * This method can be used to retrieve the value of columns with the SQL data
+         * type, Date, Time, DateTime or Timestamp. The returned `tm` structure follows
+         * the convention for usage with mktime(3) where:
+         *
+         * - tm_hour = hours since midnight [0-23]
+         * - tm_min = minutes after the hour [0-59]
+         * - tm_sec = seconds after the minute [0-60]
+         * - tm_mday = day of the month [1-31]
+         * - tm_mon = months since January **[0-11]**
+         *
+         * If the column value contains timezone information, tm_gmtoff is set to the
+         * offset from UTC in seconds, otherwise tm_gmtoff is set to 0. *On systems
+         * without tm_gmtoff, (Solaris), the member, tm_wday is set to gmt offset
+         * instead as this property is ignored by mktime on input.* The exception to
+         * the above is **tm_year** which contains the year literal and *not years
+         * since 1900* which is the convention. All other fields in the structure are
+         * set to zero. If the column type is DateTime or Timestamp all the fields
+         * mentioned above are set, if it is a Date or a Time, only the relevant
+         * fields are set.
+         *
          * @param columnIndex The first column is 1, the second is 2, ...
          * @return A tm structure with fields for date and time.
-         *         If the value is SQL NULL, a zeroed tm structure is returned. Use isNull() if in doubt.
-         * @throws sql_exception If a database access error occurs, columnIndex is outside the valid range
-         *         or if the column value cannot be converted to a valid SQL Date, Time or DateTime type.
+         *         If the value is SQL NULL, a zeroed tm structure is returned. Use 
+         *         isNull() if in doubt.
+         * @throws sql_exception If a database access error occurs, columnIndex is 
+         *         outside the valid range or if the column value cannot be converted
+         *         to a valid SQL Date, Time or DateTime type.
          */
         [[nodiscard]] tm getDateTime(int columnIndex) {
             except_wrapper(RETURN ResultSet_getDateTime(t_, columnIndex));
         }
         
         /**
-         * @brief Retrieves the value of the designated column as a Date, Time or DateTime.
+         * @brief Gets the designated column's value as a Date, Time or DateTime.
+         *
+         * This method can be used to retrieve the value of columns with the SQL data
+         * type, Date, Time, DateTime or Timestamp. The returned `tm` structure follows
+         * the convention for usage with mktime(3) where:
+         *
+         * - tm_hour = hours since midnight [0-23]
+         * - tm_min = minutes after the hour [0-59]
+         * - tm_sec = seconds after the minute [0-60]
+         * - tm_mday = day of the month [1-31]
+         * - tm_mon = months since January **[0-11]**
+         *
+         * If the column value contains timezone information, tm_gmtoff is set to the
+         * offset from UTC in seconds, otherwise tm_gmtoff is set to 0. *On systems
+         * without tm_gmtoff, (Solaris), the member, tm_wday is set to gmt offset
+         * instead as this property is ignored by mktime on input.* The exception to
+         * the above is **tm_year** which contains the year literal and *not years
+         * since 1900* which is the convention. All other fields in the structure are
+         * set to zero. If the column type is DateTime or Timestamp all the fields
+         * mentioned above are set, if it is a Date or a Time, only the relevant
+         * fields are set.
+         *
          * @param columnName The SQL name of the column. case-sensitive.
          * @return A tm structure with fields for date and time.
-         *         If the value is SQL NULL, a zeroed tm structure is returned. Use isNull() if in doubt.
-         * @throws sql_exception If a database access error occurs, columnName is not found
-         *         or if the column value cannot be converted to a valid SQL Date, Time or DateTime type.
+         *         If the value is SQL NULL, a zeroed tm structure is returned. 
+         *         Use isNull() if in doubt.
+         * @throws sql_exception If a database access error occurs, columnName is 
+         *         not found or if the column value cannot be converted to a valid
+         *         Date, Time or DateTime type.
          */
         [[nodiscard]] tm getDateTime(const std::string& columnName) {
             except_wrapper(RETURN ResultSet_getDateTimeByName(t_, columnName.c_str()));
@@ -623,6 +927,7 @@ namespace zdb {
         /**
          * @brief Constructs a ResultSet from a ResultSet_T.
          * @param t The underlying ResultSet_T.
+         * @private
          */
         explicit ResultSet(ResultSet_T t) : t_(t) {}
         
@@ -633,119 +938,188 @@ namespace zdb {
     
     /**
      * @class PreparedStatement
-     * @brief Represents a single SQL statement pre-compiled into byte code.
+     * @brief Represents a pre-compiled SQL statement for later execution.
      *
-     * A PreparedStatement can contain SQL parameters, which are set using the
-     * various bind methods. A PreparedStatement is created by calling
-     * Connection::prepareStatement().
+     * A PreparedStatement is created by calling Connection::prepareStatement(). The SQL
+     * statement may contain *in* parameters of the form "?". Such parameters represent
+     * unspecified literal values (or "wildcards") to be filled in later by the bind methods
+     * defined in this class. Each *in* parameter has an associated index number which is
+     * its sequence in the statement. The first *in* '?' parameter has index 1,
+     * the next has index 2 and so on.
      *
-     * Example usage:
-     * @code
-     * PreparedStatement stmt = con.prepareStatement("INSERT INTO employee(name, picture) VALUES(?, ?)");
+     * Consider this statement:
+     * ```sql
+     * INSERT INTO employee(name, photo) VALUES(?, ?)
+     * ```
+     * There are two *in* parameters in this statement, the parameter for setting
+     * the name has index 1 and the one for the photo has index 2. To set the values
+     * for the *in* parameters we use bindValues() with two values, one for each *in*
+     * parameter. Or we can use bind() to set the parameter values one by one.
+     *
+     * ## Examples
+     *
+     * The following examples demonstrate how to create and use a PreparedStatement.
+     *
+     * ### Example: Binding all values at once
+     *
+     * This example shows how to prepare a statement, bind multiple values at once, and execute it:
+     *
+     * ```cpp
+     * Connection con = pool.getConnection();
+     * PreparedStatement stmt = con.prepareStatement("INSERT INTO employee(name, photo) VALUES(?, ?)");
      * stmt.bindValues("Kamiya Kaoru", jpeg);
      * stmt.execute();
+     * ```
      *
-     * // Alternative, bind one by one value
-     * PreparedStatement stmt = con.prepareStatement("INSERT INTO employee(name, picture) VALUES(?, ?)");
+     * ### Example: Binding values individually
+     *
+     * Instead of binding all values at once, we can also bind values one by one by
+     * specifying the parameter index we want to set a value for:
+     *
+     * ```cpp
+     * PreparedStatement stmt = con.prepareStatement("INSERT INTO employee(name, photo) VALUES(?, ?)");
      * stmt.bind(1, "Kamiya Kaoru");
      * stmt.bind(2, jpeg);
      * stmt.execute();
-     * 
-     * @endcode
+     * ```
+     *
+     * ## Reuse
+     *
+     * A PreparedStatement can be reused. That is, the method execute() can be called one
+     * or more times to execute the same statement. Clients can also set new *in* parameter
+     * values and re-execute the statement as shown in this example, where we also show use
+     * of a transaction and exception handling:
+     *
+     * ```cpp
+     * PreparedStatement stmt = con.prepareStatement("INSERT INTO employee(name, photo) VALUES(?, ?)");
+     * try {
+     *     con.beginTransaction();
+     *     for (const auto& emp : employees) {
+     *         stmt.bind(1, emp.name);
+     *         if (emp.photo) {
+     *             stmt.bind(2, *emp.photo);
+     *         } else {
+     *             stmt.bind(2, nullptr); // Set to SQL NULL if no photo
+     *         }
+     *         stmt.execute();
+     *     }
+     *     con.commit();
+     * } catch (const sql_exception& e) {
+     *     con.rollback();
+     *     std::cerr << "Database error: " << e.what() << std::endl;
+     * }
+     * ```
+     *
+     * ## Date and Time
+     *
+     * bindValues() or bind() can be used to set a Unix timestamp value as a `time_t` type.
+     * To set Date, Time or DateTime values, simply use one of the bind methods to set a
+     * time string in a format understood by your database. For instance to set a SQL Date value,
+     * ```cpp
+     * stmt.bind(parameterIndex, "2024-12-28");
+     * // or using bindValues
+     * stmt.bindValues("2019-12-28", ...);
+     * ```
+     *
+     * ## Result Sets
+     *
+     * See Connection::executeQuery()
+     *
+     * ## SQL Injection Prevention
+     *
+     * Prepared Statement is particularly useful when dealing with user-submitted data, as
+     * properly used Prepared Statements provide strong protection against SQL injection
+     * attacks. By separating SQL logic from data, PreparedStatements ensure that user input
+     * is treated as data only, not as part of the SQL command.
+     *
+     * *A PreparedStatement is reentrant, but not thread-safe and should only be used
+     * by one thread (at a time).*
+     *
+     * @note Remember that parameter indices in PreparedStatement are 1-based, not 0-based.
+     *
+     * @note To minimizes memory allocation and avoid unnecessary data copying, string and blob
+     * values are set by reference and _MUST_ remain valid until PreparedStatement::execute()
+     * has been called.
+     *
+     * @warning PreparedStatement objects are internally managed by the Connection that
+     * created them and are not copyable or movable. Always ensure that the originating
+     * Connection object remains valid for the entire duration of the PreparedStatement's
+     * use. Basically, keep the Connection and PreparedStatement objects in the same scope.
+     * Do not attempt to use PreparedStatement objects (including through references or
+     * pointers) after their Connection has been closed and returned to the pool.
      */
     class PreparedStatement : private noncopyable {
     public:
         /**
          * @brief Move constructor.
          * @param r PreparedStatement object to move.
+         * @private
          */
         PreparedStatement(PreparedStatement&& r) noexcept : t_(r.t_) { r.t_ = nullptr; }
         
         /**
          * @brief Conversion operator to PreparedStatement_T.
          * @return The underlying PreparedStatement_T.
+         * @private
          */
         operator PreparedStatement_T() const noexcept { return t_; }
         
         /**
-         * @brief Binds a string-like value to the prepared statement.
-         * @param parameterIndex The first parameter is 1, the second is 2,..
-         * @param x The string-like value to bind.
-         * @throws sql_exception If a database access error occurs or parameterIndex
-         *         is outside the valid range
-         * @note The string data must remain valid until execute() or executeQuery()
-         *       is called. This method does not copy the string data.
+         * @brief Binds a value to the prepared statement.
+         *
+         * This method can bind different types of values:
+         * - String-like types (convertible to std::string_view)
+         * - Numeric types (integral or floating-point, excluding time_t)
+         * - Blob-like types (contiguous ranges of bytes)
+         * - time_t for timestamp values
+         * - nullptr_t for SQL NULL values
+         *
+         * @tparam T The type of the value to bind
+         * @param parameterIndex The index of the parameter to bind (1-based)
+         * @param x The value to bind
+         * @throws sql_exception If a database access error occurs or parameterIndex 
+         *         is invalid
+         * @note For string-like and blob-like types, the data must remain valid until
+         *       execute() is called. This method does not copy the data but stores a
+         *       reference to it.
+         * @note This method will fail to compile for unsupported types, providing a 
+         *       clear error message.
          */
-        void bind(int parameterIndex, Stringable auto&& x) {
-            store_[parameterIndex] = std::string_view(x);
-            except_wrapper(PreparedStatement_setString(t_, parameterIndex, std::string_view(x).data()));
-        }
-        
-        /**
-         * @brief Binds a numeric value to the prepared statement.
-         * @param parameterIndex The first parameter is 1, the second is 2,..
-         * @param x The numeric value to bind.
-         * @throws sql_exception If a database access error occurs or parameterIndex
-         *         is outside the valid range
-         */
-        void bind(int parameterIndex, Numeric auto x) {
-            if constexpr (std::integral<decltype(x)>) {
-                if constexpr (sizeof(x) <= sizeof(int)) {
+        template<typename T>
+        void bind(int parameterIndex, T&& x) {
+            if constexpr (std::is_same_v<std::remove_cvref_t<T>, std::nullptr_t>) {
+                setNull(parameterIndex);
+            } else if constexpr (Stringable<std::remove_cvref_t<T>>) {
+                store_[parameterIndex] = std::string_view(x);
+                except_wrapper(PreparedStatement_setString(t_, parameterIndex, std::string_view(x).data()));
+            } else if constexpr (Numeric<std::remove_cvref_t<T>>) {
+                if constexpr (sizeof(T) <= sizeof(int)) {
                     except_wrapper(PreparedStatement_setInt(t_, parameterIndex, static_cast<int>(x)));
                 } else {
                     except_wrapper(PreparedStatement_setLLong(t_, parameterIndex, static_cast<long long>(x)));
                 }
+            } else if constexpr (Blobable<std::remove_cvref_t<T>>) {
+                if (std::empty(x)) {
+                    setNull(parameterIndex);
+                } else {
+                    store_[parameterIndex] = std::span<const std::byte>(std::data(x), std::size(x));
+                    except_wrapper(PreparedStatement_setBlob(t_, parameterIndex, std::data(x), static_cast<int>(std::size(x))));
+                }
+            } else if constexpr (std::is_same_v<std::remove_cvref_t<T>, time_t>) {
+                except_wrapper(PreparedStatement_setTimestamp(t_, parameterIndex, x));
             } else {
-                except_wrapper(PreparedStatement_setDouble(t_, parameterIndex, static_cast<double>(x)));
+                static_assert(always_false<T>, "Unsupported type for bind");
             }
         }
         
         /**
-         * @brief Binds blob data to the prepared statement.
-         * @param parameterIndex The first parameter is 1, the second is 2,..
-         * @param x The blob value to set.
-         * @throws sql_exception If a database access error occurs or parameterIndex
-         *         is outside the valid range
-         * @note The blob data must remain valid until execute() or executeQuery()
-         *       is called. This method does not copy the blob data.
-         */
-        void bind(int parameterIndex, Blobable auto&& x) {
-            if (std::empty(x)) {
-                setNull(parameterIndex);
-            } else {
-                store_[parameterIndex] = std::span<const std::byte>(std::data(x), std::size(x));
-                except_wrapper(PreparedStatement_setBlob(t_, parameterIndex, std::data(x), static_cast<int>(std::size(x))));
-            }
-        }
-        
-        /**
-         * @brief Binds a timestamp value to the prepared statement.
-         * @param parameterIndex The first parameter is 1, the second is 2,..
-         * @param x The timestamp value to set.
-         * @throws sql_exception If a database access error occurs or parameterIndex
-         *         is outside the valid range
-         */
-        void bind(int parameterIndex, time_t x) {
-            except_wrapper(PreparedStatement_setTimestamp(t_, parameterIndex, x));
-        }
-        
-        /**
-         * @brief Binds a NULL value to the prepared statement.
-         * @param parameterIndex The first parameter is 1, the second is 2,..
-         * @throws sql_exception If a database access error occurs or parameterIndex
-         *         is outside the valid range
-         */
-        void bind(int parameterIndex, std::nullptr_t) {
-            setNull(parameterIndex);
-        }
-        
-        /**
-         * @brief Binds multiple values to a Prepared Statement all at once.
-         * @param args Values to bind to the Prepared Statement
-         * @throws sql_exception If a database access error occurs or if the number of
-         *         values does not match the placeholders in the Prepared Statement
-         * @note Reference types must remain valid until execute() or executeQuery()
-         *       is called. This method does not copy any data.
+         * @brief Binds multiple values to the Prepared Statement at once.
+         *
+         * @param args Values to bind to the Prepared Statement.
+         * @throws sql_exception If a database error occurs or if argument count 
+         *         is incorrect
+         * @note Reference types must remain valid until execute() is called.
+         *       This method does not copy any data.
          */
         template<typename... Args>
         void bindValues(Args&&... args) {
@@ -754,7 +1128,7 @@ namespace zdb {
             }
             bindValuesHelper(1, std::forward<Args>(args)...);
         }
-
+        
         /**
          * @brief Executes the prepared SQL statement.
          * @throws sql_exception If a database access error occurs
@@ -765,9 +1139,40 @@ namespace zdb {
         }
         
         /**
+         * @brief Gets the number of rows affected by the most recent SQL statement.
+         *
+         * If used with a transaction, this method should be called *before* commit is
+         * executed, otherwise 0 is returned.
+         *
+         * @return The number of rows changed.
+         */
+        [[nodiscard]] long long rowsChanged() noexcept {
+            return PreparedStatement_rowsChanged(t_);
+        }
+        
+        /**
+         * @brief Gets the number of parameters in the prepared statement.
+         * @return The number of _in_ parameters in this prepared statement
+         */
+        [[nodiscard]] int getParameterCount() noexcept {
+            return PreparedStatement_getParameterCount(t_);
+        }
+        
+    protected:
+        friend class Connection;
+        
+        /**
+         * @brief Constructs a PreparedStatement from a PreparedStatement_T.
+         * @param t The underlying PreparedStatement_T.
+         * @private
+         */
+        explicit PreparedStatement(PreparedStatement_T t) : t_(t) {}
+        
+        /**
          * @brief Executes the prepared SQL query.
          * @return A ResultSet containing the query results.
          * @throws sql_exception If a database access error occurs
+         * @private
          */
         [[nodiscard]] ResultSet executeQuery() {
             except_wrapper(
@@ -777,33 +1182,9 @@ namespace zdb {
                            );
         }
         
-        /**
-         * @brief Gets the number of rows changed by the last statement.
-         * @return The number of rows changed.
-         */
-        [[nodiscard]] long long rowsChanged() noexcept {
-            return PreparedStatement_rowsChanged(t_);
-        }
-        
-        /**
-         * @brief Gets the number of parameters in the prepared statement.
-         * @return The number of parameters.
-         */
-        [[nodiscard]] int getParameterCount() noexcept {
-            return PreparedStatement_getParameterCount(t_);
-        }
-                
-    protected:
-        friend class Connection;
-        
-        /**
-         * @brief Constructs a PreparedStatement from a PreparedStatement_T.
-         * @param t The underlying PreparedStatement_T.
-         */
-        explicit PreparedStatement(PreparedStatement_T t) : t_(t) {}
-        
     private:
         PreparedStatement_T t_;
+        
         // A store to ensure that we have valid references to reference data
         std::unordered_map<int, std::variant<std::string_view, std::span<const std::byte>>> store_;
         
@@ -823,59 +1204,143 @@ namespace zdb {
     
     /**
      * @class Connection
-     * @brief A `Connection` represent a connection to a SQL database system.
+     * @brief Represents a connection to a SQL database system.
      *
-     * The Connection class is used to execute SQL statements, manage transactions,
-     * and retrieve results. It supports executing statements directly or using
-     * prepared statements.
+     * Use a Connection to execute SQL statements. There are three ways to
+     * execute statements: execute() is used to execute SQL
+     * statements that do not return a result set. Such statements are INSERT,
+     * UPDATE or DELETE. executeQuery() is used to execute a SQL
+     * SELECT statement and return a result set. These methods can only handle
+     * values which can be expressed as C-strings. If you need to handle binary
+     * data, such as inserting a blob value into the database, use a
+     * PreparedStatement object to execute the SQL statement. The factory method
+     * prepareStatement() is used to obtain a PreparedStatement object.
      *
-     * A Connection instance should only be used by one thread at a time.
+     * The method executeQuery() will return an empty ResultSet (not null)
+     * if the SQL statement did not return any values. A ResultSet lives until the
+     * next call to Connection execute or until the Connection is returned
+     * to the ConnectionPool. If an error occurs during execution, an sql_exception
+     * is thrown.
+     *
+     * Any SQL statement that changes the database (basically, any SQL
+     * command other than SELECT) will automatically start a transaction
+     * if one is not already in effect. Automatically started transactions
+     * are committed at the conclusion of the command.
+     *
+     * Transactions can also be started manually using beginTransaction(). Such
+     * transactions usually persist until the next call to commit() or rollback().
+     * A transaction will also rollback if the database is closed or if an
+     * error occurs. Nested transactions are not allowed.
+     *
+     * ## Examples
+     *
+     * ### Basic Query Execution
+     * @code
+     * Connection con = pool.getConnection();
+     * ResultSet result = con.executeQuery("SELECT name, age FROM users WHERE id = ?", 1);
+     * if (result.next()) {
+     *     std::cout << "Name: " << result.getString("name").value_or("N/A")
+     *               << ", Age: " << result.getInt("age") << std::endl;
+     * }
+     * @endcode
+     *
+     * ### Transaction Example
+     * @code
+     * Connection con = pool.getConnection();
+     * try {
+     *     con.beginTransaction();
+     *     con.execute("UPDATE accounts SET balance = balance - ? WHERE id = ?", 100.0, 1);
+     *     con.execute("UPDATE accounts SET balance = balance + ? WHERE id = ?", 100.0, 2);
+     *     con.commit();
+     *     std::cout << "Transfer successful" << std::endl;
+     * } catch (const sql_exception& e) {
+     *     con.rollback();
+     *     std::cerr << "Transfer failed: " << e.what() << std::endl;
+     * }
+     * @endcode
+     *
+     * ### Using PreparedStatement
+     * @code
+     * Connection con = pool.getConnection();
+     * auto stmt = con.prepareStatement("INSERT INTO logs (message, timestamp) VALUES (?, ?)");
+     * stmt.bind(1, "User logged in");
+     * stmt.bind(2, std::time(nullptr));
+     * stmt.execute();
+     * std::cout << "Rows affected: " << stmt.rowsChanged() << std::endl;
+     * @endcode
+     *
+     * _A Connection is reentrant, but not thread-safe and should only be used by one
+     * thread at a time._
+     *
+     * @warning Connection objects are internally managed by the ConnectionPool that
+     * created them and are not copyable or movable. Always ensure that the originating
+     * ConnectionPool object remains valid for the entire duration of the Connection's
+     * use. It is recommended to obtain a Connection, use it for a specific task, and
+     * then close it (return it to the pool) as soon as possible, rather than holding
+     * onto it for extended periods.
      */
     class Connection : private noncopyable {
     public:
         /**
-         * @brief Destructor, closes the connection and return the underlying connection to the connection pool
+         * @brief Destructor, closes the connection and returns it to the pool.
+         * @private
          */
         ~Connection() { if (t_) close(); }
         
         /**
          * @brief Implicit conversion to the underlying Connection_T type.
          * @return The underlying Connection_T object.
+         * @private
          */
         operator Connection_T() const noexcept { return t_; }
         
         /**
-         * @brief Sets the query timeout.
+         * @brief Sets the query timeout for this Connection.
+         *
+         * If the limit is exceeded, the statement will return immediately with an error.
+         * The timeout is set per connection/session. Not all database systems
+         * support query timeout. The default is no query timeout.
+         *
          * @param ms Timeout in milliseconds.
          */
         void setQueryTimeout(int ms) noexcept { Connection_setQueryTimeout(t_, ms); }
         
         /**
-         * @brief Gets the current query timeout.
+         * @brief Gets the query timeout for this Connection.
          * @return The query timeout in milliseconds.
          */
         [[nodiscard]] int getQueryTimeout() noexcept { return Connection_getQueryTimeout(t_); }
         
         /**
-         * @brief Sets the maximum number of rows a ResultSet can contain.
+         * @brief Sets the maximum number of rows for ResultSet objects.
+         *
+         * If the limit is exceeded, the excess rows are silently dropped.
+         *
          * @param max Maximum number of rows.
          */
         void setMaxRows(int max) noexcept { Connection_setMaxRows(t_, max); }
         
         /**
-         * @brief Gets the maximum number of rows a ResultSet can contain.
+         * @brief Gets the maximum number of rows for ResultSet objects.
          * @return The maximum number of rows.
          */
         [[nodiscard]] int getMaxRows() noexcept { return Connection_getMaxRows(t_); }
         
         /**
-         * @brief Sets the number of rows to fetch when more rows are needed.
+         * @brief Sets the number of rows to fetch for ResultSet objects.
+         *
+         * The default value is 100, meaning that a ResultSet will prefetch rows in
+         * batches of 100 rows to reduce the network roundtrip to the database. This
+         * value can also be set via the URL parameter `fetch-size` to apply to all
+         * connections. This method and the concept of pre-fetching rows are only
+         * applicable to MySQL and Oracle.
+         *
          * @param rows Number of rows to fetch.
          */
         void setFetchSize(int rows) noexcept { Connection_setFetchSize(t_, rows); }
         
         /**
-         * @brief Gets the number of rows to fetch when more rows are needed.
+         * @brief Gets the number of rows to fetch for ResultSet objects.
          * @return The number of rows to fetch.
          */
         [[nodiscard]] int getFetchSize() noexcept { return Connection_getFetchSize(t_); }
@@ -887,12 +1352,21 @@ namespace zdb {
         [[nodiscard]] bool ping() noexcept { return Connection_ping(t_); }
         
         /**
-         * @brief Clears any pending results or statements.
+         * @brief Clears any ResultSet and PreparedStatements in the Connection.
+         *
+         * Normally it is not necessary to call this method, but for some
+         * implementations (SQLite) it *may, in some situations,* be
+         * necessary to call this method if an execution sequence error occurs.
          */
         void clear() noexcept { Connection_clear(t_); }
         
         /**
-         * @brief Closes the connection and return the underlying connection to the connection pool
+         * @brief Returns the connection to the connection pool.
+         *
+         * The same as calling ConnectionPool::returnConnection() on a connection.
+         * If the connection is in an uncommitted transaction, rollback is called.
+         * It is an unchecked error to attempt to use the Connection after this
+         * method was called
          */
         void close() noexcept {
             if (t_) {
@@ -908,6 +1382,14 @@ namespace zdb {
         void beginTransaction() { except_wrapper(Connection_beginTransaction(t_)); }
         
         /**
+         * @brief Checks if this Connection is in an uncommitted transaction.
+         * @return true if in a transaction, false otherwise.
+         */
+        [[nodiscard]] bool inTransaction() const noexcept {
+            return Connection_inTransaction(t_);
+        }
+        
+        /**
          * @brief Commits the current transaction.
          * @throws SQLException If a database error occurs.
          */
@@ -915,76 +1397,127 @@ namespace zdb {
         
         /**
          * @brief Rolls back the current transaction.
+         *
+         * This method will first call clear() before performing the rollback to
+         * clear any statements in progress such as selects.
+         *
          * @throws SQLException If a database error occurs.
          */
         void rollback() { except_wrapper(Connection_rollback(t_)); }
         
         /**
-         * @brief Gets the last inserted row ID.
+         * @brief Gets the last inserted row ID for auto-increment columns.
          * @return The last inserted row ID.
          */
         [[nodiscard]] long long lastRowId() noexcept { return Connection_lastRowId(t_); }
         
         /**
-         * @brief Gets the number of rows changed by the last operation.
+         * @brief Gets the number of rows affected by the last execute() statement.
+         *
+         * If used with a transaction, this method should be called *before* commit is
+         * executed, otherwise 0 is returned.
+         *
          * @return The number of rows changed.
          */
         [[nodiscard]] long long rowsChanged() noexcept { return Connection_rowsChanged(t_); }
         
         /**
-         * @brief Executes a SQL statement.
+         * @brief Executes a SQL statement, with or without parameters.
+         *
+         * This method can be used in two ways:
+         * 1. With only a SQL string, which directly executes the statement(s).
+         * 2. With a SQL string and additional arguments, which creates a PreparedStatement,
+         *    binds the provided parameters, and then executes it.
+         *
          * @param sql The SQL statement to execute.
-         * @throws SQLException If a database error occurs.
+         * @param args (Optional) Arguments to bind to the statement. These can be of various types,
+         *             including string-like types, numeric types, blob-like types, time_t, and nullptr.
+         * @throws sql_exception If a database access error occurs or if the types of the provided
+         *                       arguments don't match the expected types in the SQL statement.
+         * @note When used without arguments, this method is more efficient as it doesn't create
+         *       a PreparedStatement. When used with arguments, it provides protection against SQL
+         *       injection.
+         *
+         * Example usage:
+         * @code
+         * // Without parameters
+         * con.execute("DELETE FROM users WHERE inactive = true");
+         *
+         * // With parameters
+         * con.execute("INSERT INTO users (name, age) VALUES (?, ?)", "John Doe", 30);
+         * @endcode
          */
-        void execute(const std::string& sql) { except_wrapper(Connection_execute(t_, "%s", sql.c_str())); }
-        
-        /**
-         * @brief Executes a parameterized SQL statement.
-         * @param sql The SQL statement with placeholders.
-         * @param args The arguments to bind to the placeholders.
-         * @throws SQLException If a database error occurs.
-         */
-        template <typename ...Args>
+        template<typename... Args>
         void execute(const std::string& sql, Args&&... args) {
-            PreparedStatement p(this->prepareStatement(sql));
-            int i = 1;
-            (p.bind(i++, std::forward<Args>(args)), ...);
-            p.execute();
+            if constexpr (sizeof...(Args) == 0) {
+                except_wrapper(Connection_execute(t_, "%s", sql.c_str()));
+            } else {
+                PreparedStatement p(this->prepareStatement(sql));
+                bindValues(p, std::forward<Args>(args)...);
+                p.execute();
+            }
         }
         
         /**
          * @brief Executes a SQL query and returns a ResultSet.
+         *
+         * This method can be used in two ways:
+         * 1. With only a SQL string, which directly executes the query.
+         * 2. With a SQL string and additional arguments, which creates a PreparedStatement,
+         *    binds the provided parameters, and then executes it.
+         *
          * @param sql The SQL query to execute.
+         * @param args (Optional) Arguments to bind to the query. These can be of various types,
+         *             including string-like types, numeric types, blob-like types, time_t, and nullptr.
          * @return A ResultSet containing the query results.
-         * @throws SQLException If a database error occurs.
+         * @throws sql_exception If a database access error occurs or if the types of the provided
+         *                       arguments don't match the expected types in the SQL query.
+         * @note When used without arguments, this method is more efficient as it doesn't create
+         *       a PreparedStatement. When used with arguments, it provides protection against SQL
+         *       injection.
+         *
+         * Example usage:
+         * @code
+         * // Without parameters
+         * auto result1 = con.executeQuery("SELECT * FROM users");
+         *
+         * // With parameters
+         * auto result2 = con.executeQuery("SELECT * FROM users WHERE age > ? AND name LIKE ?", 18, "John%");
+         * @endcode
          */
-        [[nodiscard]] ResultSet executeQuery(const std::string& sql) {
-            except_wrapper(
-                           ResultSet_T r = Connection_executeQuery(t_, "%s", sql.c_str());
-                           RETURN ResultSet(r);
-                           );
-        }
-        
-        /**
-         * @brief Executes a parameterized SQL query and returns a ResultSet.
-         * @param sql The SQL query with placeholders.
-         * @param args The arguments to bind to the placeholders.
-         * @return A ResultSet containing the query results.
-         * @throws SQLException If a database error occurs.
-         */
-        template <typename ...Args>
+        template<typename... Args>
         [[nodiscard]] ResultSet executeQuery(const std::string& sql, Args&&... args) {
-            PreparedStatement p(this->prepareStatement(sql));
-            int i = 1;
-            (p.bind(i++, std::forward<Args>(args)), ...);
-            return p.executeQuery();
+            if constexpr (sizeof...(Args) == 0) {
+                except_wrapper(
+                               ResultSet_T r = Connection_executeQuery(t_, "%s", sql.c_str());
+                               RETURN ResultSet(r);
+                               );
+            } else {
+                PreparedStatement p(this->prepareStatement(sql));
+                bindValues(p, std::forward<Args>(args)...);
+                return p.executeQuery();
+            }
         }
         
         /**
          * @brief Prepares a SQL statement for execution.
+         *
+         * This method creates a PreparedStatement object that can be reused with different
+         * parameters. It's particularly useful for statements that will be executed multiple
+         * times with different values.
+         *
          * @param sql The SQL statement to prepare.
          * @return A PreparedStatement object.
-         * @throws SQLException If a database error occurs.
+         * @throws SQLException If a database error occurs during preparation.
+         *
+         * Example usage:
+         * @code
+         * auto stmt = con.prepareStatement("INSERT INTO users (name, age) VALUES (?, ?)");
+         * for (const auto& user : users) {
+         *     stmt.bindValues(user.name, user.age);
+         *     stmt.execute();
+         * }
+         * @endcode
          */
         [[nodiscard]] PreparedStatement prepareStatement(const std::string& sql) {
             except_wrapper(
@@ -994,34 +1527,17 @@ namespace zdb {
         }
         
         /**
-         * @brief Prepares a parameterized SQL statement for execution.
-         * @param sql The SQL statement with placeholders.
-         * @param args The arguments to bind to the placeholders.
-         * @return A PreparedStatement object.
-         * @throws SQLException If a database error occurs.
-         */
-        template <typename ...Args>
-        [[nodiscard]] PreparedStatement prepareStatement(const std::string& sql, Args&&... args) {
-            except_wrapper(
-                           PreparedStatement p(this->prepareStatement(sql));
-                           int i = 1;
-                           (p.bind(i++, std::forward<Args>(args)), ...);
-                           RETURN p;
-                           );
-        }
-        
-        /**
-         * @brief Gets the last error message.
+         * @brief Gets the last SQL error message.
          * @return The last error message as a string view.
          */
-        [[nodiscard]] const std::string_view getLastError() const noexcept {
-            return Connection_getLastError(t_);
+        [[nodiscard]] std::optional<std::string_view> getLastError() const noexcept {
+            return _to_optional(Connection_getLastError(t_));
         }
         
         /**
          * @brief Checks if the specified database system is supported.
-         * @param url The database URL or protocol.
-         * @return True if supported, false otherwise.
+         * @param url A database URL string or protocol.
+         * @return true if supported, false otherwise.
          */
         [[nodiscard]] static bool isSupported(const std::string& url) noexcept {
             return Connection_isSupported(url.c_str());
@@ -1033,30 +1549,135 @@ namespace zdb {
         /**
          * @brief Constructs a Connection with an existing Connection_T object.
          * @param C The existing Connection_T object.
+         * @private
          */
         explicit Connection(Connection_T C) : t_(C) {}
         
         /**
          * @brief Marks the connection as closed.
+         * @private
          */
         void setClosed() noexcept { t_ = nullptr; }
+        
+        /**
+         * @brief Helper function to bind values to a PreparedStatement.
+         * @private
+         */
+        template<typename... Args>
+        void bindValues(PreparedStatement& stmt, Args&&... args) {
+            int index = 1;
+            (stmt.bind(index++, std::forward<Args>(args)), ...);
+        }
         
     private:
         Connection_T t_;
     };
-
+    
     
     /**
      * @class ConnectionPool
-     * @brief A `ConnectionPool` represent a database connection pool
+     * @brief Represents a database connection pool.
      *
-     * The ConnectionPool class handles creating, managing, and providing
-     * connections to a database. It supports setting various properties
-     * like initial and maximum connections, connection timeouts, and more.
-     * It also includes methods for starting and stopping the pool, as well
-     * as obtaining and returning connections.
+     * A ConnectionPool can be used to obtain connections to a database and execute statements.
+     * This class opens a number of database connections and allows callers to obtain and use
+     * a database connection in a reentrant manner. Applications can instantiate as many
+     * ConnectionPool objects as needed and against as many different database systems as needed.
      *
-     * This ConnectionPool is thread-safe.
+     * ## Connection URL:
+     *
+     * The URL given to a Connection Pool at creation time specifies a database
+     * connection in the standard URL format:
+     *
+     * ```
+     * database://[user:password@][host][:port]/database[?propertyName1][=propertyValue1][&propertyName2][=propertyValue2]...
+     * ```
+     *
+     * The property names `user` and `password` are always recognized and specify how to log in
+     * to the database. Other properties depend on the database server in question. Username and
+     * password can alternatively be specified in the auth-part of the URL. If port number is
+     * omitted, the default port number for the database server is used.
+     *
+     * ### MySQL:
+     *
+     * Example URL for MySQL:
+     * ```
+     * mysql://localhost:3306/test?user=root&password=swordfish
+     * ```
+     * Or using the auth-part of the URL:
+     * ```
+     * mysql://root:swordfish@localhost:3306/test
+     * ```
+     * See [mysql options](mysqloptions.html) for all properties that can be set for a mysql connection URL.
+     *
+     * ### SQLite:
+     *
+     * For SQLite, the URL should specify a database file. SQLite uses [pragma commands](http://sqlite.org/pragma.html) for performance tuning and other special purpose
+     * database commands. Pragma syntax in the form `name=value` can be added as properties to the URL.
+     *
+     * Example URL for SQLite (with recommended pragmas):
+     * ```
+     * sqlite:///var/sqlite/test.db?synchronous=normal&foreign_keys=on&journal_mode=wal&temp_store=memory
+     * ```
+     *
+     * ### PostgreSQL:
+     *
+     * Example URL for PostgreSQL:
+     * ```
+     * postgresql://localhost:5432/test?user=root&password=swordfish
+     * ```
+     * Or using the auth-part and SSL:
+     * ```
+     * postgresql://root:swordfish@localhost/test?use-ssl=true
+     * ```
+     * See [postgresql options](postgresoptions.html) for all properties that can be set for a postgresql connection URL.
+     *
+     * ### Oracle:
+     *
+     * Example URL for Oracle:
+     * ```
+     * oracle://localhost:1521/servicename?user=scott&password=tiger
+     * ```
+     * Or using the auth-part and SYSDBA role:
+     * ```
+     * oracle://sys:password@localhost:1521/servicename?sysdba=true
+     * ```
+     * See [oracle options](oracleoptions.html) for all properties that can be set for an oracle connection URL.
+     *
+     * ## Pool Management:
+     *
+     * The pool is designed to dynamically manage the number of active connections
+     * based on usage patterns. A `reaper` thread is automatically started when the
+     * pool is initialized, performing two critical functions:
+     *
+     * 1. Sweeping through the pool at regular intervals (default every 60 seconds)
+     *    to close connections that have been inactive for a specified time (default
+     *    90 seconds).
+     * 2. Performing periodic validation (ping test) on idle connections to ensure
+     *    they remain valid and responsive.
+     *
+     * ## Example Usage:
+     *
+     * @code
+     * URL url("mysql://localhost/test?user=root&password=swordfish");
+     * ConnectionPool pool(url);
+     * pool.start();
+     * // ...
+     * Connection con = pool.getConnection();
+     * ResultSet result = con.executeQuery("SELECT id, name, photo FROM employee WHERE salary > ?", 50000);
+     * while (result.next()) {
+     *     int id = result.getInt("id");
+     *     auto name = result.getString("name");
+     *     auto photo = result.getBlob("photo");
+     *     // Process data...
+     * }
+     * @endcode
+     *
+     * @note This ConnectionPool is thread-safe.
+     *
+     * @warning A ConnectionPool is neither copyable nor movable. It is designed to be a
+     * long-lived object that manages database connections throughout the lifetime of your
+     * application. Typically, you would instantiate one or more ConnectionPool objects
+     * as part of a resource management class or in the global scope of your application.
      */
     class ConnectionPool : private noncopyable {
     public:
@@ -1072,11 +1693,9 @@ namespace zdb {
         }
         
         /**
-         * @brief Constructs a ConnectionPool by taking ownership of the given URL object.
+         * @brief Constructs a ConnectionPool with a URL object.
          * @param url The database connection URL object to move from.
          * @throws sql_exception If the URL is invalid.
-         * @note After this operation, the passed URL object is left in a valid but unspecified state.
-         *       It's safe to destroy or reassign the moved-from URL object, but using its value is undefined.
          */
         explicit ConnectionPool(URL&& url) : url_(std::move(url)) {
             if (!url_)
@@ -1086,12 +1705,14 @@ namespace zdb {
         
         /**
          * @brief Destructor, releases resources allocated by the pool.
+         * @private
          */
         ~ConnectionPool() { ConnectionPool_free(&t_); }
         
         /**
          * @brief Implicit conversion to the underlying ConnectionPool_T type.
          * @return The underlying ConnectionPool_T object.
+         * @private
          */
         operator ConnectionPool_T() noexcept { return t_; }
         
@@ -1103,10 +1724,10 @@ namespace zdb {
         
         /**
          * @brief Sets the number of initial connections in the pool.
-         * @param connections The number of initial connections.
+         * @param initialConnections The number of initial connections.
          */
-        void setInitialConnections(int connections) noexcept {
-            ConnectionPool_setInitialConnections(t_, connections);
+        void setInitialConnections(int initialConnections) noexcept {
+            ConnectionPool_setInitialConnections(t_, initialConnections);
         }
         
         /**
@@ -1119,6 +1740,11 @@ namespace zdb {
         
         /**
          * @brief Sets the maximum number of connections in the pool.
+         *
+         * If max connections has been reached, getConnection() will fail on
+         * the next call. It is a checked runtime error for maxConnections to
+         * be less than initialConnections.
+         *
          * @param maxConnections The maximum number of connections.
          */
         void setMaxConnections(int maxConnections) noexcept {
@@ -1134,7 +1760,13 @@ namespace zdb {
         }
         
         /**
-         * @brief Sets the connection timeout value.
+         * @brief Sets the connection inactive timeout value in seconds.
+         *
+         * The method reapConnections(), if called, will close inactive
+         * connections in the pool which have not been in use for
+         * `connectionTimeout` seconds. The default connectionTimeout is
+         * 90 seconds.
+         *
          * @param connectionTimeout The timeout value in seconds.
          */
         void setConnectionTimeout(int connectionTimeout) noexcept {
@@ -1150,24 +1782,40 @@ namespace zdb {
         }
         
         using AbortHandler = std::function<void(std::string_view)>;
-
+        
         /**
-         * @brief Set the function to call if a fatal error occurs in the library
-         * In practice this means Out-Of-Memory errors or uncatched exceptions.
+         * @brief Sets the function to call if a fatal error occurs in the library.
+         *
+         * In practice this means Out-Of-Memory errors or uncaught exceptions.
          * Clients may optionally provide this function. If not provided
-         * the library will call `abort(3)` or `exit(1)` upon encountering a fatal error
+         * the library will call `abort(3)` or `exit(1)` upon encountering a fatal error.
          * It is an unchecked runtime error to continue using the library after
          * the `abortHandler` was called.
+         *
          * @param abortHandler The handler function to call on fatal errors.
          */
         void setAbortHandler(AbortHandler abortHandler = nullptr) noexcept {
             g_abortHandler = std::move(abortHandler);
             ConnectionPool_setAbortHandler(t_, g_abortHandler ? bridgeAbortHandler : nullptr);
         }
-
+        
         /**
-         * @brief Sets the reaper thread sweep interval.
-         * @param sweepInterval The sweep interval in seconds.
+         * @brief Customizes the reaper thread behavior or disables it.
+         *
+         * By default, a reaper thread is automatically started when the pool
+         * is initialized, with a default sweep interval of 60 seconds. This method
+         * allows you to change the sweep interval or disable the reaper entirely.
+         *
+         * The reaper thread closes inactive Connections in the pool, down to the
+         * initial connection count. An inactive Connection is closed if its
+         * `connectionTimeout` has expired or if it fails a ping test. Active
+         * Connections (those in current use) are never closed by this thread.
+         *
+         * This method can be called before or after ConnectionPool::start(). If
+         * called after start, the changes will take effect on the next sweep cycle.
+         *
+         * @param sweepInterval Number of seconds between sweeps of the reaper thread.
+         *        Set to 0 or a negative value to disable the reaper thread.
          */
         void setReaper(int sweepInterval) noexcept {
             ConnectionPool_setReaper(t_, sweepInterval);
@@ -1186,28 +1834,69 @@ namespace zdb {
         [[nodiscard]] int active() noexcept { return ConnectionPool_active(t_); }
         
         /**
-         * @brief Starts the connection pool.
-         * @throws SQLException If a database error occurs.
+         * @brief Checks if the pool is full.
+         *
+         * I.e., if the number of *active* connections in the pool is equal
+         * to max connections and the pool is unable to return a connection
+         *
+         * @return true if pool is full, false otherwise
+         */
+        [[nodiscard]] int isFull() noexcept { return ConnectionPool_isFull(t_); }
+        
+        /**
+         * @brief Prepares the pool for active use.
+         *
+         * This method must be called before the pool is used. It will connect to the database
+         * server, create the initial connections for the pool, and start the reaper
+         * thread with default settings, unless previously disabled via setReaper().
+         *
+         * @throws sql_exception If a database error occurs.
          */
         void start() { except_wrapper(ConnectionPool_start(t_)); }
         
         /**
-         * @brief Stops the connection pool.
+         * @brief Gracefully terminates the pool.
+         *
+         * This method should be the last one called on a given instance
+         * of this component. Calling this method closes down all connections in the
+         * pool, disconnects the pool from the database server, and stops the reaper
+         * thread if it was started.
+         *
          * @throws sql_exception If there are active connections.
          */
         void stop() {
             if (this->active() > 0) {
-                throw sql_exception(
-                                    "Trying to stop the pool with active Connections. "
+                throw sql_exception("Trying to stop the pool with active Connections. "
                                     "Please close all active Connections first");
             }
-            ConnectionPool_stop(t_);
+            except_wrapper(ConnectionPool_stop(t_));
         }
         
         /**
-         * @brief Obtains a connection from the pool.
+         * @brief Gets a connection from the pool.
+         *
+         * The returned Connection is guaranteed to be alive and connected to the database.
+         *
+         * An sql_exception may be thrown if a database error occurs (e.g., network issues, database unavailability).
+         *
+         * Here's a basic example of how to use getConnection and handle potential errors:
+         *
+         * ```cpp
+         * if (pool.isFull()) {
+         *     // Consider increasing pool size before trying to get a connection
+         * }
+         *
+         * try {
+         *     Connection con = pool.getConnection();
+         *     // Use the connection ...
+         * } catch (const sql_exception& e) {
+         *         std::cerr << "Error: " << e.what() << std::endl;
+         *     }
+         * }
+         * ```
+         *
          * @return A Connection object.
-         * @throws SQLException If a database error occurs.
+         * @throws sql_exception If a database connection cannot be obtained
          */
         [[nodiscard]] Connection getConnection() {
             except_wrapper(
@@ -1242,7 +1931,7 @@ namespace zdb {
         URL url_;
         ConnectionPool_T t_;
     };
-
+    
 } // namespace zdb
 
 #endif
