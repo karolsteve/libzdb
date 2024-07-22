@@ -2,7 +2,10 @@
 
 AC_PREREQ([2.53])
 
-AC_INIT([libzdb], [3.2.3], [bugs-libzdb@tildeslash.com]) # update version in zdb.h
+AC_INIT([libzdb], [3.3.0], [bugs-libzdb@tildeslash.com])
+AC_SUBST([VERSION_MAJOR], [`echo $PACKAGE_VERSION | cut -d. -f1`])
+AC_SUBST([VERSION_MINOR], [`echo $PACKAGE_VERSION | cut -d. -f2`])
+AC_SUBST([VERSION_REVISION], [`echo $PACKAGE_VERSION | cut -d. -f3`])
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE
@@ -77,19 +80,8 @@ AS_IF([test "$STDC_VERSION" -ge 201710],
     )]
 )
 
-# Require C++20 or later
-# Doing this manually as AC_COMPUTE_INT does not work
-AC_LANG_PUSH([C++])
-AC_MSG_CHECKING([for C++20 support])
-echo 'int main() { return 0; }' > t.cpp
-if ${CXX} -std=c++20 t.cpp -o t 2>/dev/null; then
-    CXXFLAGS="$CXXFLAGS -std=c++20"
-    AC_MSG_RESULT([yes])
-else
-    AC_MSG_ERROR([Your compiler does not support C++20 or later])
-fi
-rm -f t.cpp conftest
-AC_LANG_POP([C++])
+# Require C++20 or later to build C++ test code and use zdbpp.h
+# But we don't test the cpp compiler here as C++ is optional
 
 # Check for C99 headers
 AC_CHECK_HEADERS([stdint.h stdbool.h], [], [AC_MSG_ERROR([toolchain does not have C99 headers])])
@@ -482,6 +474,7 @@ AC_CHECK_MEMBERS([struct tm.tm_gmtoff], [], [], [[#include <time.h>]])
 
 AC_CONFIG_HEADERS(src/xconfig.h)
 AC_CONFIG_FILES([
+        src/zdb.h
         Makefile
         test/Makefile
         zdb.pc
