@@ -96,12 +96,12 @@
  gcc -o select select.c -L/<prefix>/lib -lzdb -I/<prefix>/include/zdb
 
  Libzdb can be used directly in a C++ or in an Objective-C++ project.
- Instead of including <zdb.h>, include <zdbpp.h> which is a C++17 wrapper
+ Instead of including <zdb.h>, include <zdbpp.h> which is a C++20 API
  for idiomatic usage of libzdb in your C++ project.
 
  Compile and link a C++ program with libzdb;
 
- g++ -o select select.cpp -std=c++17 -L/<prefix>/lib -lzdb -I/<prefix>/include/zdb
+ g++ -o select select.cpp -std=c++20 -L/<prefix>/lib -lzdb -I/<prefix>/include/zdb
 
  On some systems you may have to explicit set LD_LIBRARY_PATH if
  libzdb was installed in a non-standard location
@@ -137,7 +137,7 @@
  please subscribe to the libzdb general mailing list and post your 
  questions there. 
  
-   https://www.tildeslash.com/mailman/listinfo/libzdb-general
+ https://tildeslash.com/mailman3/postorius/lists/libzdb-general.tildeslash.com/
 
 
  Contributing
