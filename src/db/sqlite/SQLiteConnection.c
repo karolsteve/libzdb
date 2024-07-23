@@ -67,7 +67,7 @@ static sqlite3 *_doConnect(Connection_T delegator, char **error) {
                 return NULL;
         }
 #if SQLITE_VERSION_NUMBER >= 3005000
-        status = sqlite3_open_v2(path, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
+        status = sqlite3_open_v2(path, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX, NULL);
 #else
         status = sqlite3_open(path, &db);
 #endif
