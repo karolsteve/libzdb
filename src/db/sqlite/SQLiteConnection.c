@@ -66,10 +66,8 @@ static sqlite3 *_doConnect(Connection_T delegator, char **error) {
                 *error = Str_dup("no database specified in URL");
                 return NULL;
         }
-        /* Shared cache mode help reduce database lock problems if libzdb is used with many threads */
 #if SQLITE_VERSION_NUMBER >= 3005000
-        sqlite3_enable_shared_cache(true);
-        status = sqlite3_open_v2(path, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_SHAREDCACHE, NULL);
+        status = sqlite3_open_v2(path, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
 #else
         status = sqlite3_open(path, &db);
 #endif
