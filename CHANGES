@@ -6,13 +6,10 @@ Version 3.3.1
 -------------
 
 * New: Enabled SQLITE_OPEN_NOMUTEX flag when opening SQLite
-  connections to support multi-threaded mode when available.
-  This can improve performance in multi-threaded applications
-  if libsqlite was built with SQLITE_THREADSAFE=2. For most
-  stock libsqlite builds (SQLITE_THREADSAFE=1), this flag
-  is silently ignored, maintaining compatibility. libzdb's
-  ConnectionPool ensures thread-safe usage, making this
-  a safe optimization when supported by libsqlite
+  connections to support multi-threaded mode. This can improve
+  performance in multi-threaded applications by allowing
+  concurrent access to the database from multiple threads.
+  Works with stock libsqlite builds (SQLITE_THREADSAFE=1 or 2).
 * Fix: Disabled use of sqlite3_enable_shared_cache and
   SQLITE_OPEN_SHAREDCACHE with open_v2(). Although we did
   see some concurrency benefits with shared cache in the
