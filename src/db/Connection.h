@@ -270,7 +270,7 @@ URL_T Connection_getURL(T C);
 /**
  * @brief Pings the database server to check if the connection is alive.
  * @param C A Connection object
- * @return True if the connection is alive, false otherwise.
+ * @return true if the connection is alive, false otherwise.
  */
 bool Connection_ping(T C);
 

@@ -688,7 +688,7 @@ namespace zdb {
          * Use this method if you need to differentiate between SQL NULL and std::nullopt/0.
          *
          * @param columnIndex The first column is 1, the second is 2, ...
-         * @return True if column value is SQL NULL, otherwise false.
+         * @return true if column value is SQL NULL, false otherwise.
          * @throws sql_exception If a database access error occurs or columnIndex is invalid.
          */
         [[nodiscard]] bool isNull(int columnIndex) {
@@ -1403,7 +1403,7 @@ namespace zdb {
 
         /**
          * @brief Pings the database server to check if the connection is alive.
-         * @return True if the connection is alive, false otherwise.
+         * @return true if the connection is alive, false otherwise.
          */
         [[nodiscard]] bool ping() noexcept { return Connection_ping(t_); }
         
@@ -1904,7 +1904,7 @@ namespace zdb {
          *
          * @return true if pool is full, false otherwise
          */
-        [[nodiscard]] int isFull() noexcept { return ConnectionPool_isFull(t_); }
+        [[nodiscard]] bool isFull() noexcept { return ConnectionPool_isFull(t_); }
         
         /**
          * @brief Prepares the pool for active use.

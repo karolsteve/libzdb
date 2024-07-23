@@ -255,7 +255,7 @@ bool ResultSet_next(T R);
  *
  * @param R A ResultSet object
  * @param columnIndex The first column is 1, the second is 2, ...
- * @return True if column value is SQL NULL, otherwise false
+ * @return true if column value is SQL NULL, false otherwise
  * @exception SQLException If a database access error occurs or
  * columnIndex is outside the valid range
  * @see SQLException.h
