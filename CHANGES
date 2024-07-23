@@ -1,6 +1,17 @@
-                        CHANGES version 3.3.0
+                        CHANGES version 3.3.1
 
               This file summarizes changes made since 1.0
+              
+Version 3.3.1
+-------------
+
+* Fix: Disabled use of sqlite3_enable_shared_cache and
+  SQLITE_OPEN_SHAREDCACHE with open_v2(). Although we did
+  see some concurrency benefits with shared cache in the
+  old days, it is best not to use it due to some potential
+  nasty side-effects. SQLite also discourages its use. Luckily,
+  stock libsqlite is built with shared cache disabled so our
+  attempt to activate it was essentially a no-op in any case.
 
 Version 3.3.0
 -------------
