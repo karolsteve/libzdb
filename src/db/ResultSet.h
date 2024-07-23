@@ -301,12 +301,6 @@ const char *ResultSet_getStringByName(T R, const char *columnName);
 
 /**
  * @brief Gets the designated column's value as an int.
- *
- * In general, on both 32 and 64 bit architectures, `int` is 4 bytes
- * or 32 bits and `long long` is 8 bytes or 64 bits. A `long` type is
- * usually equal to `int` on 32 bit architecture and equal to `long long`
- * on 64 bit architecture.
- *
  * @param R A ResultSet object
  * @param columnIndex The first column is 1, the second is 2, ...
  * @return The column value; if the value is SQL NULL, the value
@@ -320,12 +314,6 @@ int ResultSet_getInt(T R, int columnIndex);
 
 /**
  * @brief Gets the designated column's value as an int.
- *
- * In general, on both 32 and 64 bit architectures, `int` is 4 bytes
- * or 32 bits and `long long` is 8 bytes or 64 bits. A `long` type is
- * usually equal to `int` on 32 bit architecture and equal to `long long`
- * on 64 bit architecture.
- *
  * @param R A ResultSet object
  * @param columnName The SQL name of the column. *case-sensitive*
  * @return The column value; if the value is SQL NULL, the value
@@ -339,12 +327,6 @@ int ResultSet_getIntByName(T R, const char *columnName);
 
 /**
  * @brief Gets the designated column's value as a long long.
-
- * In general, on both 32 and 64 bit architectures, `int` is 4 bytes
- * or 32 bits and `long long` is 8 bytes or 64 bits. A `long` type is
- * usually equal to `int` on 32 bit architecture and equal to `long long`
- * on 64 bit architecture.
- *
  * @param R A ResultSet object
  * @param columnIndex The first column is 1, the second is 2, ...
  * @return The column value; if the value is SQL NULL, the value
@@ -358,12 +340,6 @@ long long ResultSet_getLLong(T R, int columnIndex);
 
 /**
  * @brief Gets the designated column's value as a long long.
-
- * In general, on both 32 and 64 bit architectures, `int` is 4 bytes
- * or 32 bits and `long long` is 8 bytes or 64 bits. A `long` type is
- * usually equal to `int` on 32 bit architecture and equal to `long long`
- * on 64 bit architecture.
- *
  * @param R A ResultSet object
  * @param columnName The SQL name of the column. *case-sensitive*
  * @return The column value; if the value is SQL NULL, the value

@@ -154,8 +154,7 @@ void PreparedStatement_free(T *P) __attribute__ ((visibility("hidden")));
 /// @{
 
 /**
- * @brief Sets the *in* parameter at index `parameterIndex` to the
- * given string value.
+ * @brief Sets the *in* parameter at index `parameterIndex` to the given string value.
  * @param P A PreparedStatement object
  * @param parameterIndex The first parameter is 1, the second is 2,..
  * @param x The string value to set. Must be a NUL terminated string. NULL
@@ -168,8 +167,7 @@ void PreparedStatement_setString(T P, int parameterIndex, const char *x);
 
 
 /**
- * @brief Sets the *in* parameter at index `parameterIndex` to the
- * given int value.
+ * @brief Sets the *in* parameter at index `parameterIndex` to the given int value.
  * @param P A PreparedStatement object
  * @param parameterIndex The first parameter is 1, the second is 2,..
  * @param x The int value to set
@@ -181,8 +179,7 @@ void PreparedStatement_setInt(T P, int parameterIndex, int x);
 
 
 /**
- * @brief Sets the *in* parameter at index `parameterIndex` to the
- * given long long value.
+ * @brief Sets the *in* parameter at index `parameterIndex` to the given long long value.
  * @param P A PreparedStatement object
  * @param parameterIndex The first parameter is 1, the second is 2,..
  * @param x The long long value to set
@@ -194,8 +191,7 @@ void PreparedStatement_setLLong(T P, int parameterIndex, long long x);
 
 
 /**
- * @brief Sets the *in* parameter at index `parameterIndex` to the
- * given double value.
+ * @brief Sets the *in* parameter at index `parameterIndex` to the given double value.
  * @param P A PreparedStatement object
  * @param parameterIndex The first parameter is 1, the second is 2,..
  * @param x The double value to set
@@ -207,8 +203,7 @@ void PreparedStatement_setDouble(T P, int parameterIndex, double x);
 
 
 /**
- * @brief Sets the *in* parameter at index `parameterIndex` to the
- * given blob value.
+ * @brief Sets the *in* parameter at index `parameterIndex` to the given blob value.
  * @param P A PreparedStatement object
  * @param parameterIndex The first parameter is 1, the second is 2,..
  * @param x The blob value to set
@@ -242,8 +237,7 @@ void PreparedStatement_setTimestamp(T P, int parameterIndex, time_t x);
 
 
 /**
- * @brief Sets the *in* parameter at index `parameterIndex` to
- * SQL NULL.
+ * @brief Sets the *in* parameter at index `parameterIndex` to SQL NULL.
  * @param P A PreparedStatement object
  * @param parameterIndex The first parameter is 1, the second is 2,..
  * @exception SQLException If a database access error occurs or if parameter
