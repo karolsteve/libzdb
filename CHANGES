@@ -22,11 +22,6 @@ Version 3.3.0
   calling ConnectionPool_getConnection() to proactively
   manage pool resources and handle full pool scenarios
   efficiently, such as increasing max connections
-* New: Added ConnectionPool_getConnectionOrException() for
-  better error reporting. If the pool is not able to return
-  a new connection, an exception is thrown with the exact
-  cause, which is that the pool is either full or a data-
-  base error occurred.
 * New: PreparedStatement_setNull() can be used to explicit
   set a parameter in a prepared statements to SQL NULL.
 * New: Changed default timeout before an inactive connection
