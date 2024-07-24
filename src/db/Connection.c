@@ -337,10 +337,6 @@ PreparedStatement_T Connection_prepareStatement(T C, const char *sql, ...) {
         assert(sql);
         va_list ap;
         va_start(ap, sql);
-        // TODO: Optimization: Cache prepared statement using a hash(sql) and
-        // lookup the cache first to see if we can reuse one already created.
-        // We already "cache" prepared statements created in a Vector
-        // but do not reuse
         PreparedStatement_T p = C->op->prepareStatement(C->D, sql, ap);
         va_end(ap);
         if (p)
