@@ -130,9 +130,10 @@ time_t timegm(struct tm *tm)
 #define TM_GMTOFF tm_wday
 #endif
 
-#define _i2a(i) (x[0] = ((i) / 10) + '0', x[1] = ((i) % 10) + '0')
-#define _isValidDate ((tm.tm_mday < 32 && tm.tm_mday >= 1) && (tm.tm_mon < 12 && tm.tm_mon >= 0))
-#define _isValidTime ((tm.tm_hour < 24 && tm.tm_hour >= 0) && (tm.tm_min < 60 && tm.tm_min >= 0) && (tm.tm_sec < 61 && tm.tm_sec >= 0))
+#define _i2a(i, x) ((x)[0] = ((i) / 10) + '0', (x)[1] = ((i) % 10) + '0')
+
+#define _isValidDate(tm) (((tm).tm_mday < 32 && (tm).tm_mday >= 1) && ((tm).tm_mon < 12 && (tm).tm_mon >= 0))
+#define _isValidTime(tm) (((tm).tm_hour < 24 && (tm).tm_hour >= 0) && ((tm).tm_min < 60 && (tm).tm_min >= 0) && ((tm).tm_sec < 61 && (tm).tm_sec >= 0))
 
 
 /* --------------------------------------------------------------- Private */
@@ -219,7 +220,7 @@ struct tm *Time_toDateTime(const char *s, struct tm *t) {
                         tm.tm_year = _a2i(token, 4);
                         tm.tm_mon  = _a2i(token + 5, 2) - 1;
                         tm.tm_mday = _a2i(token + 8, 2);
-                        have_date  = _isValidDate;
+                        have_date  = _isValidDate(tm);
                         continue;
                  }
                  yyyy dd dd
@@ -227,7 +228,7 @@ struct tm *Time_toDateTime(const char *s, struct tm *t) {
                         tm.tm_year = _a2i(token, 4);
                         tm.tm_mon  = _a2i(token + 4, 2) - 1;
                         tm.tm_mday = _a2i(token + 6, 2);
-                        have_date  = _isValidDate;
+                        have_date  = _isValidDate(tm);
                         continue;
                  }
                  dd x dd x yyyy
@@ -235,7 +236,7 @@ struct tm *Time_toDateTime(const char *s, struct tm *t) {
                         tm.tm_mday = _a2i(token, 2);
                         tm.tm_mon  = _a2i(token + 3, 2) - 1;
                         tm.tm_year = _a2i(token + 6, 4);
-                        have_date  = _isValidDate;
+                        have_date  = _isValidDate(tm);
                         continue;
                  }
                  dd x mmm x yyyy
@@ -243,7 +244,7 @@ struct tm *Time_toDateTime(const char *s, struct tm *t) {
                         tm.tm_mday = _a2i(token, 2);
                         tm.tm_mon  = _m2i(token + 3);
                         tm.tm_year = _a2i(token + 7, 4);
-                        have_date  = _isValidDate;
+                        have_date  = _isValidDate(tm);
                         continue;
                  }
                  dd x dd x dd frac?
@@ -251,7 +252,7 @@ struct tm *Time_toDateTime(const char *s, struct tm *t) {
                         tm.tm_hour = _a2i(token, 2);
                         tm.tm_min  = _a2i(token + 3, 2);
                         tm.tm_sec  = _a2i(token + 6, 2);
-                        have_time  = _isValidTime;
+                        have_time  = _isValidTime(tm);
                         continue;
                  }
                  dd dd dd frac?
@@ -259,7 +260,7 @@ struct tm *Time_toDateTime(const char *s, struct tm *t) {
                         tm.tm_hour = _a2i(token, 2);
                         tm.tm_min  = _a2i(token + 2, 2);
                         tm.tm_sec  = _a2i(token + 4, 2);
-                        have_time  = _isValidTime;
+                        have_time  = _isValidTime(tm);
                         continue;
                  }
                  dd ':' dd
@@ -267,7 +268,7 @@ struct tm *Time_toDateTime(const char *s, struct tm *t) {
                         tm.tm_hour = _a2i(token, 2);
                         tm.tm_min  = _a2i(token + 3, 2);
                         tm.tm_sec  = 0;
-                        have_time  = _isValidTime;
+                        have_time  = _isValidTime(tm);
                         continue;
                  }
                  tz
@@ -300,25 +301,25 @@ char *Time_toString(time_t time, char result[static 20]) {
         gmtime_r(&time, &ts);
         memcpy(result, "YYYY-MM-DD HH:MM:SS\0", 20);
         /*              0    5  8  11 14 17 */
-        _i2a((ts.tm_year+1900)/100);
+        _i2a((ts.tm_year+1900)/100, x);
         result[0] = x[0];
         result[1] = x[1];
-        _i2a((ts.tm_year+1900)%100);
+        _i2a((ts.tm_year+1900)%100, x);
         result[2] = x[0];
         result[3] = x[1];
-        _i2a(ts.tm_mon + 1); // Months in 01-12
+        _i2a(ts.tm_mon + 1, x); // Months in 01-12
         result[5] = x[0];
         result[6] = x[1];
-        _i2a(ts.tm_mday);
+        _i2a(ts.tm_mday, x);
         result[8] = x[0];
         result[9] = x[1];
-        _i2a(ts.tm_hour);
+        _i2a(ts.tm_hour, x);
         result[11] = x[0];
         result[12] = x[1];
-        _i2a(ts.tm_min);
+        _i2a(ts.tm_min, x);
         result[14] = x[0];
         result[15] = x[1];
-        _i2a(ts.tm_sec);
+        _i2a(ts.tm_sec, x);
         result[17] = x[0];
         result[18] = x[1];
 	return result;
