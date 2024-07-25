@@ -94,7 +94,7 @@ static void testStr(void) {
         }
         printf("=> Test5: OK\n\n");
         
-        printf("=> Test6: parseInt, parseLong, parseLLong, parseFloat, parseDouble\n");
+        printf("=> Test6: parseInt, parseLong, parseLLong, parseFloat, parseDouble, parseBool\n");
         {
                 char i[STRLEN] = "   -2812 bla";
                 char ll[STRLEN ] = "  2147483642 blabla";
@@ -120,6 +120,23 @@ static void testStr(void) {
                 }
                 CATCH(SQLException)
                 END_TRY;
+                char t[] = "true";
+                assert(Str_parseBool(t) == true);
+                assert(Str_parseBool("true") == true);
+                assert(Str_parseBool("TRUE") == true);
+                assert(Str_parseBool("yes") == true);
+                assert(Str_parseBool("  Yes  ") == true);
+                assert(Str_parseBool("1") == true);
+                assert(Str_parseBool(" 1 a and 2") == true);
+                assert(Str_parseBool("on") == true);
+                assert(Str_parseBool("enable") == true);
+                assert(Str_parseBool("enabled") == true);
+                assert(Str_parseBool("truelove") == false);
+                assert(Str_parseBool("yesterday") == false);
+                assert(Str_parseBool("1234") == false);
+                assert(Str_parseBool("only") == false);
+                assert(Str_parseBool("enabler") == false);
+                assert(Str_parseBool("enabledment") == false);
         }
         printf("=> Test6: OK\n\n");
         

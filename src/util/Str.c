@@ -40,6 +40,21 @@
  */
 
 
+/* -------------------------------------------------------- Private methods */
+
+
+static inline bool _is_equals_ci(const char *s, const char *literal) {
+    for (int i = 0; ; i++) {
+        if (literal[i] == 0) {
+            return s[i] == 0 || isspace((unsigned char)s[i]);
+        }
+        if (tolower((unsigned char)s[i]) != tolower((unsigned char)literal[i])) {
+            return false;
+        }
+    }
+}
+
+
 /* ----------------------------------------------------- Protected methods */
 
 
@@ -181,6 +196,30 @@ double Str_parseDouble(const char *s) {
 		THROW(SQLException, "NumberFormatException: For input string %s -- %s", s, System_getLastError());
 	return d;
 }
+
+
+bool Str_parseBool(const char *s) {
+        if (STR_DEF(s)) {
+                while (isspace((unsigned char)*s)) s++;
+                switch (tolower((unsigned char)*s)) {
+                        case '1':
+                                return s[1] == '\0' || isspace(s[1]);
+                        case 'y':
+                                return _is_equals_ci(s, "yes");
+                        case 't':
+                                return _is_equals_ci(s, "true");
+                        case 'o':
+                                return _is_equals_ci(s, "on");
+                        case 'e':
+                                return _is_equals_ci(s, "enable") || _is_equals_ci(s, "enabled");
+                        default:
+                                return false;
+                }
+        }
+        return false;
+}
+
+
 
 #ifdef PACKAGE_PROTECTED
 #pragma GCC visibility pop

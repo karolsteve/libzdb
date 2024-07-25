@@ -167,4 +167,38 @@ long long Str_parseLLong(const char *s);
 double Str_parseDouble(const char *s);
 
 
+/**
+ * Parses the string argument as a boolean value. The function ignores
+ * leading whitespace and is case-insensitive. It checks if the string,
+ * after ignoring leading whitespace, starts with any of the following
+ * values: "true", "yes", "1", "on", "enable", or "enabled", followed by
+ * either whitespace or the end of the string. If such a pattern is found,
+ * the function returns true. For any other value or pattern, it returns false.
+ * Example:
+ * <pre>
+ * Str_parseBool("true")        -> true
+ * Str_parseBool("TRUE")        -> true
+ * Str_parseBool("yes")         -> true
+ * Str_parseBool("  Yes  ")     -> true
+ * Str_parseBool("1")           -> true
+ * Str_parseBool(" 1 and 2")    -> true
+ * Str_parseBool("on")          -> true
+ * Str_parseBool("enable")      -> true
+ * Str_parseBool("enabled")     -> true
+ * Str_parseBool("truelove")    -> false
+ * Str_parseBool("yesterday")   -> false
+ * Str_parseBool("1234")        -> false
+ * Str_parseBool("only")        -> false
+ * Str_parseBool("enabler")     -> false
+ * Str_parseBool("enabledment") -> false
+ * </pre>
+ * @param s A string representing a boolean value.
+ * @return true if 's' starts with a boolean value ("true", "yes", "1", "on",
+ * "enable", "enabled"), followed by a space or the end of the string,
+ * false otherwise. The comparison is case-insensitive. If 's' is NULL or
+ * the empty string, the function returns false.
+ */
+bool Str_parseBool(const char *s);
+
+
 #endif
