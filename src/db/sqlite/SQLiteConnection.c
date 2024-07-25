@@ -58,16 +58,33 @@ extern const struct Pop_T sqlite3pops;
 /* --------------------------------------------------------- Private methods */
 
 
+// Return options for the database connection
+static int _options(URL_T url) {
+        int options = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE;
+        // Specify the connection's threading mode. Multi-thread
+        // is the default, setting URL parameter 'serialized=true'
+        // enable  the "serialized" threading mode instead
+        // @see https://www.sqlite.org/threadsafe.html
+        if (Str_parseBool(URL_getParameter(url, "serialized"))) {
+                options |= SQLITE_OPEN_FULLMUTEX;
+        } else {
+                options |= SQLITE_OPEN_NOMUTEX;
+        }
+        return options;
+}
+
+
 static sqlite3 *_doConnect(Connection_T delegator, char **error) {
         int status;
         sqlite3 *db;
-        const char *path = URL_getPath(Connection_getURL(delegator));
+        URL_T url = Connection_getURL(delegator);
+        const char *path = URL_getPath(url);
         if (! path) {
                 *error = Str_dup("no database specified in URL");
                 return NULL;
         }
 #if SQLITE_VERSION_NUMBER >= 3005000
-        status = sqlite3_open_v2(path, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX, NULL);
+        status = sqlite3_open_v2(path, &db, _options(url) , NULL);
 #else
         status = sqlite3_open(path, &db);
 #endif
@@ -86,16 +103,19 @@ static bool _setProperties(T C, char **error) {
         if (properties) {
                 StringBuffer_clear(C->sb);
                 for (int i = 0; properties[i]; i++) {
-                        if (IS(properties[i], "heap_limit")) // There is no PRAGMA for heap limit as of sqlite-3.7.0, so we make it a configurable property using "heap_limit" [kB]
+                        if (IS(properties[i], "heap_limit")) { // There is no PRAGMA for heap limit as of sqlite-3.7.0, so we make it a configurable property using "heap_limit" [kB]
 #if defined(HAVE_SQLITE3_SOFT_HEAP_LIMIT64)
                                 sqlite3_soft_heap_limit64(Str_parseInt(URL_getParameter(url, properties[i])) * 1024);
 #elif defined(HAVE_SQLITE3_SOFT_HEAP_LIMIT)
-                        sqlite3_soft_heap_limit(Str_parseInt(URL_getParameter(url, properties[i])) * 1024);
+                                sqlite3_soft_heap_limit(Str_parseInt(URL_getParameter(url, properties[i])) * 1024);
 #else
-                        DEBUG("heap_limit not supported by your sqlite3 version, please consider upgrading sqlite3\n");
+                                DEBUG("heap_limit not supported by your sqlite3 version, please consider upgrading sqlite3\n");
 #endif
-                        else
+                        } else if (IS(properties[i], "serialized")) {
+                                continue; // Handled in _doConnect, ignore
+                        } else {
                                 StringBuffer_append(C->sb, "PRAGMA %s = %s; ", properties[i], URL_getParameter(url, properties[i]));
+                        }
                 }
                 C->lastError = zdb_sqlite3_exec(C->db, StringBuffer_toString(C->sb));
                 if (C->lastError != SQLITE_OK) {
