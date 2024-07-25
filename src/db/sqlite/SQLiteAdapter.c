@@ -140,25 +140,32 @@ static inline void _backoff(int step) {
 
 // MARK: - Backoff API
 
-#define _exec_or_backoff(S) do { \
-        for (int i = 0, steps = 10; i < steps; i++) { \
-        int status = S; \
-        if ((status != SQLITE_BUSY) && (status != SQLITE_LOCKED)) return status; \
-        _backoff(i); } return S; } while(0)
+// Backoff statement expression
+#define _exec_or_backoff(S) \
+    ({ \
+        int __status; \
+        for (int __i = 0, __steps = 10; __i < __steps; __i++) { \
+            __status = (S); \
+            if ((__status != SQLITE_BUSY) && (__status != SQLITE_LOCKED)) \
+                break; \
+            _backoff(__i); \
+        } \
+        __status; \
+    })
 
 
 int zdb_sqlite3_step(sqlite3_stmt *pStmt) {
-        _exec_or_backoff(sqlite3_step(pStmt));
+        return _exec_or_backoff(sqlite3_step(pStmt));
 }
 
 
 int zdb_sqlite3_prepare_v2(sqlite3 *db, const char *zSql, int nSql, sqlite3_stmt **ppStmt, const char **pz) {
-        _exec_or_backoff(sqlite3_prepare_v2(db, zSql, nSql, ppStmt, pz));
+        return _exec_or_backoff(sqlite3_prepare_v2(db, zSql, nSql, ppStmt, pz));
 }
 
 
 int zdb_sqlite3_exec(sqlite3 *db, const char *sql) {
-        _exec_or_backoff(sqlite3_exec(db, sql, NULL, NULL, NULL));
+        return _exec_or_backoff(sqlite3_exec(db, sql, NULL, NULL, NULL));
 }
 
 
