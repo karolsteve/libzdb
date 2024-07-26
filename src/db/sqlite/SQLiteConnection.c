@@ -50,7 +50,7 @@ struct T {
         StringBuffer_T sb;
         Connection_T delegator;
 };
-static int kQueryTimeoutDelta = 3000; // 3 seconds
+static int kQueryTimeoutDelta = 5;
 extern const struct Rop_T sqlite3rops;
 extern const struct Pop_T sqlite3pops;
 

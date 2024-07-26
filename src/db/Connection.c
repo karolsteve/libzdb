@@ -256,7 +256,6 @@ void Connection_close(T C) {
 
 
 void Connection_beginTransaction(T C) {
-        assert(C);
         Connection_beginTransactionType(C, TRANSACTION_DEFAULT);
 }
 
