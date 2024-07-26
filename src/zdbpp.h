@@ -1432,10 +1432,23 @@ namespace zdb {
         }
         
         /**
-         * @brief Begins a new transaction.
-         * @throws SQLException If a database error occurs.
+         * @brief Begins a new transaction with optional isolation level.
+         *
+         * Usage:
+         * @code
+         *   connection.beginTransaction(); // Uses default isolation level
+         *   connection.beginTransaction(TRANSACTION_SERIALIZABLE); // Specifies isolation level
+         * @endcode
+         *
+         * @param type The transaction isolation level (default: TRANSACTION_DEFAULT).
+         *             @see TRANSACTION_TYPE enum for available options.
+         * @throws SQLException If a database error occurs or if a transaction is already in progress.
+         * @note All transactions must be ended with either commit() or rollback().
+         *       Nested transactions are not supported.
          */
-        void beginTransaction() { except_wrapper(Connection_beginTransaction(t_)); }
+        void beginTransaction(TRANSACTION_TYPE type = TRANSACTION_DEFAULT) {
+            except_wrapper(Connection_beginTransactionType(t_, type));
+        }
         
         /**
          * @brief Checks if this Connection is in an uncommitted transaction.

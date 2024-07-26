@@ -50,7 +50,7 @@ struct T {
         StringBuffer_T sb;
         Connection_T delegator;
 };
-static int kQueryTimeoutDelta = 5;
+static int kQueryTimeoutDelta = 3000; // 3 seconds
 extern const struct Rop_T sqlite3rops;
 extern const struct Pop_T sqlite3pops;
 
@@ -174,10 +174,26 @@ static void _setQueryTimeout(T C, int ms) {
 }
 
 
+static bool _beginTransactionType(T C, TRANSACTION_TYPE type) {
+    assert(C);
+    const char *sql;
+    switch (type) {
+        case TRANSACTION_IMMEDIATE:
+            sql = "BEGIN IMMEDIATE TRANSACTION;";
+            break;
+        case TRANSACTION_EXCLUSIVE:
+            sql = "BEGIN EXCLUSIVE TRANSACTION;";
+            break;
+        default:
+            sql = "BEGIN TRANSACTION;";
+    }
+    C->lastError = zdb_sqlite3_exec(C->db, sql);
+    return (C->lastError == SQLITE_OK);
+}
+
+
 static bool _beginTransaction(T C) {
-        assert(C);
-        C->lastError = zdb_sqlite3_exec(C->db, "BEGIN TRANSACTION;");
-        return (C->lastError == SQLITE_OK);
+    return _beginTransactionType(C, TRANSACTION_DEFAULT);
 }
 
 
@@ -259,19 +275,20 @@ static const char *_getLastError(T C) {
 
 
 const struct Cop_T sqlite3cops = {
-        .name 		  = "sqlite",
-        .new 		  = _new,
-        .free 		  = _free,
-        .ping		  = _ping,
-        .setQueryTimeout  = _setQueryTimeout,
-        .beginTransaction = _beginTransaction,
-        .commit           = _commit,
-        .rollback	  = _rollback,
-        .lastRowId	  = _lastRowId,
-        .rowsChanged	  = _rowsChanged,
-        .execute	  = _execute,
-        .executeQuery	  = _executeQuery,
-        .prepareStatement = _prepareStatement,
-        .getLastError	  = _getLastError
+        .name 		        = "sqlite",
+        .new 		        = _new,
+        .free 		        = _free,
+        .ping		        = _ping,
+        .setQueryTimeout        = _setQueryTimeout,
+        .beginTransaction       = _beginTransaction,
+        .beginTransactionType   = _beginTransactionType,
+        .commit                 = _commit,
+        .rollback	        = _rollback,
+        .lastRowId	        = _lastRowId,
+        .rowsChanged	        = _rowsChanged,
+        .execute	        = _execute,
+        .executeQuery	        = _executeQuery,
+        .prepareStatement       = _prepareStatement,
+        .getLastError	        = _getLastError
 };
 

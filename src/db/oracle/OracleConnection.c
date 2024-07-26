@@ -47,7 +47,7 @@
 
 
 #define ERB_SIZE 152
-#define ORACLE_TRANSACTION_PERIOD 10
+#define ORACLE_TRANSACTION_PERIOD 10 // 10-second timeout (though not used with OCI_TRANS_NEW)
 #define T ConnectionDelegate_T
 struct T {
         Connection_T   delegator;
@@ -254,18 +254,43 @@ static void _setQueryTimeout(T C, int ms) {
 }
 
 
+static bool _beginTransactionType(T C, TRANSACTION_TYPE type) {
+    assert(C);
+
+    // Allocate transaction handle if not already done
+    if (C->txnhp == NULL) {
+        C->lastError = OCIHandleAlloc(C->env, (void **)&C->txnhp, OCI_HTYPE_TRANS, 0, 0);
+        if (C->lastError != OCI_SUCCESS)
+            return false;
+        OCIAttrSet(C->svc, OCI_HTYPE_SVCCTX, (void *)C->txnhp, 0, OCI_ATTR_TRANS, C->err);
+    }
+
+    // Set isolation level based on transaction type
+    ub4 flags = OCI_TRANS_NEW;  // Always start a new transaction
+    switch (type) {
+        case TRANSACTION_READ_COMMITTED:
+            flags |= OCI_TRANS_READONLY;  // This is actually READ COMMITTED in Oracle
+            break;
+        case TRANSACTION_SERIALIZABLE:
+            flags |= OCI_TRANS_SERIALIZABLE;
+            break;
+        case TRANSACTION_READ_UNCOMMITTED:
+        case TRANSACTION_REPEATABLE_READ:
+        case TRANSACTION_IMMEDIATE:
+        case TRANSACTION_EXCLUSIVE:
+        case TRANSACTION_DEFAULT:
+        default:
+            flags |= OCI_TRANS_READONLY;  // Default to READ COMMITTED
+    }
+
+    // Start the transaction
+    C->lastError = OCITransStart(C->svc, C->err, ORACLE_TRANSACTION_PERIOD, flags);
+    return (C->lastError == OCI_SUCCESS);
+}
+
+
 static bool _beginTransaction(T C) {
-        assert(C);
-        if (C->txnhp == NULL) /* Allocate handler only once, if it is necessary */
-        {
-            /* allocate transaction handle and set it in the service handle */
-            C->lastError = OCIHandleAlloc(C->env, (void **)&C->txnhp, OCI_HTYPE_TRANS, 0, 0);
-            if (C->lastError != OCI_SUCCESS) 
-                return false;
-            OCIAttrSet(C->svc, OCI_HTYPE_SVCCTX, (void *)C->txnhp, 0, OCI_ATTR_TRANS, C->err);
-        }
-        C->lastError = OCITransStart (C->svc, C->err, ORACLE_TRANSACTION_PERIOD, OCI_TRANS_NEW);
-        return (C->lastError == OCI_SUCCESS);
+    return _beginTransactionType(C, TRANSACTION_DEFAULT);
 }
 
 
@@ -424,18 +449,19 @@ static PreparedStatement_T _prepareStatement(T C, const char *sql, va_list ap) {
 
 
 const struct Cop_T oraclesqlcops = {
-        .name             = "oracle",
-        .new              = _new,
-        .free             = _free,
-        .ping             = _ping,
-        .setQueryTimeout  = _setQueryTimeout,
-        .beginTransaction = _beginTransaction,
-        .commit           = _commit,
-        .rollback         = _rollback,
-        .lastRowId        = _lastRowId,
-        .rowsChanged      = _rowsChanged,
-        .execute          = _execute,
-        .executeQuery     = _executeQuery,
-        .prepareStatement = _prepareStatement,
-        .getLastError     = _getLastError
+        .name                   = "oracle",
+        .new                    = _new,
+        .free                   = _free,
+        .ping                   = _ping,
+        .setQueryTimeout        = _setQueryTimeout,
+        .beginTransaction       = _beginTransaction,
+        .beginTransactionType   = _beginTransactionType,
+        .commit                 = _commit,
+        .rollback               = _rollback,
+        .lastRowId              = _lastRowId,
+        .rowsChanged            = _rowsChanged,
+        .execute                = _execute,
+        .executeQuery           = _executeQuery,
+        .prepareStatement       = _prepareStatement,
+        .getLastError           = _getLastError
 };

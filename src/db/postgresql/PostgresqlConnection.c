@@ -162,12 +162,31 @@ static void _setQueryTimeout(T C, int ms) {
 }
 
 
-static bool _beginTransaction(T C) {
-	assert(C);
-        PGresult *res = PQexec(C->db, "BEGIN TRANSACTION;");
+static bool _beginTransactionType(T C, TRANSACTION_TYPE type) {
+        assert(C);
+        const char *sql;
+        switch (type) {
+                case TRANSACTION_READ_COMMITTED:
+                        sql = "BEGIN TRANSACTION ISOLATION LEVEL READ COMMITTED;";
+                        break;
+                case TRANSACTION_REPEATABLE_READ:
+                        sql = "BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;";
+                        break;
+                case TRANSACTION_SERIALIZABLE:
+                        sql = "BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;";
+                        break;
+                default:
+                        sql = "BEGIN TRANSACTION;";
+        }
+        PGresult *res = PQexec(C->db, sql);
         C->lastError = PQresultStatus(res);
         PQclear(res);
         return (C->lastError == PGRES_COMMAND_OK);
+}
+
+
+static bool _beginTransaction(T C) {
+    return _beginTransactionType(C, TRANSACTION_DEFAULT);
 }
 
 
@@ -260,19 +279,20 @@ static const char *_getLastError(T C) {
 
 
 const struct Cop_T postgresqlcops = {
-        .name             = "postgresql",
-        .new              = _new,
-        .free             = _free,
-        .ping             = _ping,
-        .setQueryTimeout  = _setQueryTimeout,
-        .beginTransaction = _beginTransaction,
-        .commit           = _commit,
-        .rollback         = _rollback,
-        .lastRowId        = _lastRowId,
-        .rowsChanged      = _rowsChanged,
-        .execute          = _execute,
-        .executeQuery     = _executeQuery,
-        .prepareStatement = _prepareStatement,
-        .getLastError     = _getLastError
+        .name                   = "postgresql",
+        .new                    = _new,
+        .free                   = _free,
+        .ping                   = _ping,
+        .setQueryTimeout        = _setQueryTimeout,
+        .beginTransaction       = _beginTransaction,
+        .beginTransactionType   = _beginTransactionType,
+        .commit                 = _commit,
+        .rollback               = _rollback,
+        .lastRowId              = _lastRowId,
+        .rowsChanged            = _rowsChanged,
+        .execute                = _execute,
+        .executeQuery           = _executeQuery,
+        .prepareStatement       = _prepareStatement,
+        .getLastError           = _getLastError
 };
 

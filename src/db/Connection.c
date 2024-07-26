@@ -257,7 +257,13 @@ void Connection_close(T C) {
 
 void Connection_beginTransaction(T C) {
         assert(C);
-        if (! C->op->beginTransaction(C->D))
+        Connection_beginTransactionType(C, TRANSACTION_DEFAULT);
+}
+
+
+void Connection_beginTransactionType(T C, TRANSACTION_TYPE type) {
+        assert(C);
+        if (! C->op->beginTransactionType(C->D, type))
                 THROW(SQLException, "%s", Connection_getLastError(C));
         C->inTransaction++;
 }

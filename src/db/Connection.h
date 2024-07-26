@@ -137,6 +137,67 @@
 #define T Connection_T
 typedef struct Connection_S *T;
 
+
+/**
+ * Enum representing different transaction isolation levels and behaviors.
+ * Support for specific types varies depending on the database system being used.
+ *
+ * Note: All transactions must be explicitly ended with either a commit or a rollback 
+ * operation, regardless of the isolation level or database system.
+ */
+typedef enum {
+    /**
+     * Use the default transaction behavior of the underlying database system.
+     * - MySQL: REPEATABLE READ
+     * - PostgreSQL: READ COMMITTED
+     * - Oracle: READ COMMITTED
+     * - SQLite: SERIALIZABLE
+     */
+    TRANSACTION_DEFAULT = 0,
+
+    /**
+     * Lowest isolation level. Transactions can read uncommitted data.
+     * Supported by: MySQL
+     * Not supported by: PostgreSQL, Oracle, SQLite
+     */
+    TRANSACTION_READ_UNCOMMITTED,
+
+    /**
+     * Prevents dirty reads. A transaction only sees data committed before the transaction began.
+     * Supported by: MySQL, PostgreSQL, Oracle
+     * Not applicable to SQLite (always SERIALIZABLE)
+     */
+    TRANSACTION_READ_COMMITTED,
+
+    /**
+     * Prevents non-repeatable reads.
+     * Supported by: MySQL, PostgreSQL
+     * Not supported by: Oracle
+     * Not applicable to SQLite (always SERIALIZABLE)
+     */
+    TRANSACTION_REPEATABLE_READ,
+
+    /**
+     * Highest isolation level. Prevents dirty reads, non-repeatable reads, and phantom reads.
+     * Supported by: MySQL, PostgreSQL, Oracle
+     * Default and only level for SQLite
+     */
+    TRANSACTION_SERIALIZABLE,
+
+    /**
+     * SQLite-specific. Starts a transaction immediately, acquiring a RESERVED lock.
+     * Not applicable to other database systems.
+     */
+    TRANSACTION_IMMEDIATE,
+
+    /**
+     * SQLite-specific. Starts a transaction and acquires an EXCLUSIVE lock immediately.
+     * Not applicable to other database systems.
+     */
+    TRANSACTION_EXCLUSIVE
+} TRANSACTION_TYPE;
+
+
 //<< Protected methods
 
 /**
@@ -301,12 +362,22 @@ void Connection_close(T C);
 
 
 /**
- * @brief Begins a new transaction.
+ * @brief Begins a new (default) transaction.
  * @param C A Connection object
  * @exception SQLException If a database error occurs
  * @see SQLException.h
  */
 void Connection_beginTransaction(T C);
+
+
+/**
+ * @brief Begins a new specific transaction.
+ * @param C A Connection object
+ * @param type The transaction type to start
+ * @exception SQLException If a database error occurs
+ * @see SQLException.h
+ */
+void Connection_beginTransactionType(T C, TRANSACTION_TYPE type);
 
 
 /**

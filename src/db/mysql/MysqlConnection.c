@@ -202,10 +202,32 @@ static void _setQueryTimeout(T C, int ms) {
 }
 
 
-static bool _beginTransaction(T C) {
+static bool _beginTransactionType(T C, TRANSACTION_TYPE type) {
         assert(C);
-        C->lastError = mysql_query(C->db, "START TRANSACTION;");
+        const char *sql;
+        switch (type) {
+                case TRANSACTION_READ_UNCOMMITTED:
+                        sql = "SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED; START TRANSACTION;";
+                        break;
+                case TRANSACTION_READ_COMMITTED:
+                        sql = "SET TRANSACTION ISOLATION LEVEL READ COMMITTED; START TRANSACTION;";
+                        break;
+                case TRANSACTION_REPEATABLE_READ:
+                        sql = "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ; START TRANSACTION;";
+                        break;
+                case TRANSACTION_SERIALIZABLE:
+                        sql = "SET TRANSACTION ISOLATION LEVEL SERIALIZABLE; START TRANSACTION;";
+                        break;
+                default:
+                        sql = "START TRANSACTION;";
+        }
+        C->lastError = mysql_query(C->db, sql);
         return (C->lastError == MYSQL_OK);
+}
+
+
+static bool _beginTransaction(T C) {
+    return _beginTransactionType(C, TRANSACTION_DEFAULT);
 }
 
 
@@ -294,19 +316,20 @@ static const char *_getLastError(T C) {
 
 
 const struct Cop_T mysqlcops = {
-        .name 		  = "mysql",
-        .new 		  = _new,
-        .free 		  = _free,
-        .ping		  = _ping,
-        .setQueryTimeout  = _setQueryTimeout,
-        .beginTransaction = _beginTransaction,
-        .commit		  = _commit,
-        .rollback	  = _rollback,
-        .lastRowId	  = _lastRowId,
-        .rowsChanged	  = _rowsChanged,
-        .execute	  = _execute,
-        .executeQuery     = _executeQuery,
-        .prepareStatement = _prepareStatement,
-        .getLastError     = _getLastError
+        .name 		        = "mysql",
+        .new 		        = _new,
+        .free 		        = _free,
+        .ping		        = _ping,
+        .setQueryTimeout        = _setQueryTimeout,
+        .beginTransaction       = _beginTransaction,
+        .beginTransactionType   = _beginTransactionType,
+        .commit		        = _commit,
+        .rollback	        = _rollback,
+        .lastRowId	        = _lastRowId,
+        .rowsChanged	        = _rowsChanged,
+        .execute	        = _execute,
+        .executeQuery           = _executeQuery,
+        .prepareStatement       = _prepareStatement,
+        .getLastError           = _getLastError
 };
 

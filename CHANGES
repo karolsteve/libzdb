@@ -5,11 +5,16 @@
 Version 3.3.1
 -------------
 
-* New: Enabled SQLITE_OPEN_NOMUTEX flag when opening SQLite
-  connections to support multi-threaded mode. This can improve
+* New: Connection_beginTransactionType() can be used used to
+  specify the desired transaction characteristics when
+  beginning a new transaction.
+* New: Use SQLITE_OPEN_NOMUTEX flag when opening SQLite
+  connections to enable multi-thread mode. This can improve
   performance in multi-threaded applications by allowing
   concurrent access to the database from multiple threads.
   Works with stock libsqlite builds (SQLITE_THREADSAFE=1 or 2).
+  The URL property, serialized=true, can be used to set the
+  connection in serialized thread mode.
 * Fix: Disabled use of sqlite3_enable_shared_cache and
   SQLITE_OPEN_SHAREDCACHE with open_v2(). Although we did
   see some concurrency benefits with shared cache in the
