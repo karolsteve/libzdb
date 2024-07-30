@@ -155,27 +155,40 @@ void PreparedStatement_free(T *P) __attribute__ ((visibility("hidden")));
 
 /**
  * @brief Sets the *in* parameter at index `parameterIndex` to the given string value.
+ *
+ * This method is less efficient than PreparedStatement_setSString() as it needs
+ * to calculate the string length. Use PreparedStatement_setSString() if you know
+ * the size of the string.
+ *
  * @param P A PreparedStatement object
- * @param parameterIndex The first parameter is 1, the second is 2,..
- * @param x The string value to set. Must be a NUL ('\0'} terminated string. NULL
- * is allowed to indicate a SQL NULL value.
+ * @param parameterIndex The first parameter is 1, the second is 2, ...
+ * @param x The string value to set. The string must be a '\0' terminated C-string.
+ *          NULL is allowed to indicate a SQL NULL value.
  * @exception SQLException If a database access error occurs or if parameter
  * index is out of range
  * @see SQLException.h
+ * @see PreparedStatement_setSString
  */
 void PreparedStatement_setString(T P, int parameterIndex, const char *x);
 
 
 /**
- * @brief Sets the *in* parameter at index `parameterIndex` to the given `sized` string value.
+ * @brief Sets the *in* parameter at index `parameterIndex` to the given `sized`
+ * string value.
+ *
+ * This method is more efficient than PreparedStatement_setString() as it doesn't
+ * need to calculate the string length.
+ *
  * @param P A PreparedStatement object
- * @param parameterIndex The first parameter is 1, the second is 2,..
- * @param x The string value to set. The string need not be '\0' terminated
- * @param size The length of the byte string. Optionally including the terminating
- *             '\0' character.
+ * @param parameterIndex The first parameter is 1, the second is 2, ...
+ * @param x The string value to set. The string need not be '\0' terminated.
+ *          NULL is allowed to indicate a SQL NULL value.
+ * @param size The length of the byte string. For instance, the value returned
+ *             by `strlen(3)`. If size is negative, it will be treated as 0.
  * @exception SQLException If a database access error occurs or if parameter
  * index is out of range
  * @see SQLException.h
+ * @see PreparedStatement_setString
  */
 void PreparedStatement_setSString(T P, int parameterIndex, const char *x, int size);
 
@@ -220,8 +233,8 @@ void PreparedStatement_setDouble(T P, int parameterIndex, double x);
  * @brief Sets the *in* parameter at index `parameterIndex` to the given blob value.
  * @param P A PreparedStatement object
  * @param parameterIndex The first parameter is 1, the second is 2,..
- * @param x The blob value to set
- * @param size The number of bytes in the blob
+ * @param x The blob value to set. NULL is allowed to indicate a SQL NULL value
+ * @param size The number of bytes in the blob. If size is negative, it will be treated as 0.
  * @exception SQLException If a database access error occurs or if parameter
  * index is out of range
  * @see SQLException.h
