@@ -26,6 +26,7 @@
 #include "Config.h"
 
 #include <stdio.h>
+#include <string.h>
 
 #include "ResultSet.h"
 #include "PreparedStatement.h"
@@ -84,8 +85,15 @@ void PreparedStatement_free(T *P) {
 
 
 void PreparedStatement_setString(T P, int parameterIndex, const char *x) {
-	assert(P);
-        P->op->setString(P->D, parameterIndex, x);
+        int size = (x) ? (int)strlen(x) : 0;
+        PreparedStatement_setSString(P, parameterIndex, x, size);
+}
+
+
+void PreparedStatement_setSString(T P, int parameterIndex, const char *x, int size) {
+        assert(P);
+        if (size < 0) size = 0;
+        P->op->setString(P->D, parameterIndex, x, size);
 }
 
 

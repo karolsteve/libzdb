@@ -157,13 +157,27 @@ void PreparedStatement_free(T *P) __attribute__ ((visibility("hidden")));
  * @brief Sets the *in* parameter at index `parameterIndex` to the given string value.
  * @param P A PreparedStatement object
  * @param parameterIndex The first parameter is 1, the second is 2,..
- * @param x The string value to set. Must be a NUL terminated string. NULL
+ * @param x The string value to set. Must be a NUL ('\0'} terminated string. NULL
  * is allowed to indicate a SQL NULL value.
  * @exception SQLException If a database access error occurs or if parameter
  * index is out of range
  * @see SQLException.h
  */
 void PreparedStatement_setString(T P, int parameterIndex, const char *x);
+
+
+/**
+ * @brief Sets the *in* parameter at index `parameterIndex` to the given `sized` string value.
+ * @param P A PreparedStatement object
+ * @param parameterIndex The first parameter is 1, the second is 2,..
+ * @param x The string value to set. The string need not be '\0' terminated
+ * @param size The length of the byte string. Optionally including the terminating
+ *             '\0' character.
+ * @exception SQLException If a database access error occurs or if parameter
+ * index is out of range
+ * @see SQLException.h
+ */
+void PreparedStatement_setSString(T P, int parameterIndex, const char *x, int size);
 
 
 /**
