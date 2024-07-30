@@ -87,15 +87,11 @@
  * }
  * ELSE
  * {
- *     // The error message in Exception_frame.message will specify
- *     // if the pool is full or if a database error occured.
- *
+ *     // The error message in Exception_frame.message specify the error that occured
  *     printf("Transfer failed: %s\n", Exception_frame.message);
  *
- *     // Connection_close() below will automatically call Connection_rollback()
- *     // if Connection is in an uncommitted transaction. We could of course
- *     // call Connection_rollback(con) here, but we must then remember to declare
- *     // the connection volatile to have access to it in this block
+ *     // Connection_close() will automatically call Connection_rollback() if
+ *     // the connection is in an uncommitted transaction
  * }
  * FINALLY
  * {
@@ -366,16 +362,27 @@ void Connection_close(T C);
  * @param C A Connection object
  * @exception SQLException If a database error occurs
  * @see SQLException.h
+ * @note All transactions must be ended with either Connection_commit()
+ *       or Connection_rollback(). Nested transactions are not supported.
  */
 void Connection_beginTransaction(T C);
 
 
 /**
  * @brief Begins a new specific transaction.
+ *
+ * This method is similar to Connection_beginTransaction() except 
+ * it allows you to specify the new transaction's isolation level
+ * explicitly. Connection_beginTransaction() uses the default isolation
+ * level for the database.
+ *
  * @param C A Connection object
  * @param type The transaction type to start
+ *             @see TRANSACTION_TYPE enum for available options.
  * @exception SQLException If a database error occurs
  * @see SQLException.h
+ * @note All transactions must be ended with either Connection_commit()
+ *       or Connection_rollback(). Nested transactions are not supported.
  */
 void Connection_beginTransactionType(T C, TRANSACTION_TYPE type);
 

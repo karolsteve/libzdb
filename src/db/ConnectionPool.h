@@ -208,17 +208,16 @@
  *
  * The pool is designed to dynamically manage the number of active connections
  * based on usage patterns. A `reaper` thread is automatically started when the
- * pool is initialized, performing two critical functions:
+ * pool is initialized, performing two functions:
  *
- * 1. Sweeping through the pool at regular intervals (default every 60 seconds)
+ * 1. Sweep through the pool at regular intervals (default every 60 seconds)
  *    to close connections that have been inactive for a specified time (default
  *    90 seconds).
- * 2. Performing periodic validation (ping test) on idle connections to ensure
+ * 2. Perform periodic validation (ping test) on idle connections to ensure
  *    they remain valid and responsive.
  *
  * This dual functionality helps maintain the pool's health by removing stale
- * connections and verifying the validity of idle ones, which is particularly
- * important for reducing load on the database and ensuring connection reliability.
+ * connections and verifying the validity of idle ones.
  *
  * Only inactive connections will be closed, and no more than the initial number
  * of connections the pool was started with are closed. The property method,
@@ -258,9 +257,11 @@ extern int ZBDEBUG;
 
 
 /**
- * Create a new ConnectionPool. The pool is created with a default of 5
- * initial connections. Maximum connections is set to 20. Property
- * methods in this interface can be used to change the default values.
+ * @brief Create a new ConnectionPool.
+ *
+ * The pool is created with 5 initial connections. Maximum connections is
+ * set to 20. Property methods in this interface can be used to change
+ * the default values.
  *
  * @param url The database connection URL. It is a checked runtime error
  * for the url parameter to be NULL. The pool **does not** take ownership
@@ -396,7 +397,8 @@ void ConnectionPool_setAbortHandler(T P, void(*abortHandler)(const char *error))
  *
  * @param P A ConnectionPool object
  * @param sweepInterval Number of seconds between sweeps of the reaper thread.
- *        Set to 0 or a negative value to disable the reaper thread.
+ *        Set to 0 or a negative value to disable the reaper thread, _before_
+ *        calling ConnectionPool_start().
  */
 void ConnectionPool_setReaper(T P, int sweepInterval);
 
@@ -480,15 +482,10 @@ Connection_T ConnectionPool_getConnection(T P);
  * occured. This method will instead throw an SQLException in both cases
  * with an appropriate error message.
  *
- * This example demonstrates how to check if the pool is full before attempting
- * to get a connection, and how to handle potential errors:
+ * This example demonstrates how to get a connection, and how to handle
+ * potential errors:
  *
  * ```c
- * if (ConnectionPool_isFull(p)) {
- *     // Consider increasing pool size before trying to get a connection
- *     // ConnectionPool_setMaxConnections(p, ...)
- * }
- *
  * Connection_T con = NULL;
  * TRY
  * {
@@ -518,7 +515,7 @@ Connection_T ConnectionPool_getConnectionOrException(T P);
 
 
 /**
- * @brief Returns a connection to the pool. The same as calling Connection_close()
+ * @brief Returns a connection to the pool. 
  *
  * The same as calling Connection_close() on a connection. If the connection
  * is in an uncommitted transaction, rollback is called. It is an unchecked
