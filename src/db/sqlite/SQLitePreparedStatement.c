@@ -79,10 +79,9 @@ static void _free(T *P) {
 }
 
 
-static void _setString(T P, int parameterIndex, const char *x) {
+static void _setString(T P, int parameterIndex, const char *x, int size) {
         assert(P);
         sqlite3_reset(P->stmt);
-        int size = x ? (int)strlen(x) : 0;
         P->lastError = sqlite3_bind_text(P->stmt, parameterIndex, x, size, SQLITE_STATIC);
         if (P->lastError == SQLITE_RANGE)
                 THROW(SQLException, "Parameter index is out of range");

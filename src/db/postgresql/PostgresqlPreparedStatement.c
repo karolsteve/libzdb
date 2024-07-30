@@ -110,11 +110,11 @@ static void _free(T *P) {
 }
 
 
-static void _setString(T P, int parameterIndex, const char *x) {
+static void _setString(T P, int parameterIndex, const char *x, int size) {
         assert(P);
         int i = checkAndSetParameterIndex(parameterIndex, P->parameterCount);
         P->paramValues[i] = (char *)x;
-        P->paramLengths[i] = 0;
+        P->paramLengths[i] = size;
         P->paramFormats[i] = 0;
 }
 

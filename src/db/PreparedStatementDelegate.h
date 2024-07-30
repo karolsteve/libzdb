@@ -39,7 +39,7 @@ typedef struct T *T;
 typedef struct Pop_T {
         const char *name;
         void (*free)(T *P);
-        void (*setString)(T P, int parameterIndex, const char *x);
+        void (*setString)(T P, int parameterIndex, const char *x, int size);
         void (*setInt)(T P, int parameterIndex, int x);
         void (*setLLong)(T P, int parameterIndex, long long x);
         void (*setDouble)(T P, int parameterIndex, double x);

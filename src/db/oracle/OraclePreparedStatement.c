@@ -136,12 +136,12 @@ static void _free(T *P) {
 }
 
 
-static void _setString(T P, int parameterIndex, const char *x) {
+static void _setString(T P, int parameterIndex, const char *x, int size) {
         assert(P);
         int i = checkAndSetParameterIndex(parameterIndex, P->parameterCount);
         P->params[i].type.string = x;
-        if (x) {
-                P->params[i].length = (int)strlen(x);
+        if (size > 0) {
+                P->params[i].length = size;
                 P->params[i].is_null = OCI_IND_NOTNULL;
         } else {
                 P->params[i].length = 0;
