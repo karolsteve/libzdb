@@ -43,7 +43,8 @@
                 connect-timeout
             </td>
             <td>
-                Connect timeout in seconds. Default is 3 seconds. It is a checked runtime error to use a value equal to or less than 0.
+                Specifies the connect timeout in seconds. This is the duration to wait when establishing a connection to the database.
+                The default value is 3 seconds. Using a value less than or equal to 0 will result in a runtime error.
                 <p class="example">Example: connect-timeout=5</p>
             </td>
             <td>
