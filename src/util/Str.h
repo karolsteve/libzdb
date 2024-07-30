@@ -168,8 +168,7 @@ double Str_parseDouble(const char *s);
 
 
 /**
- * Parses the string argument as a boolean value. The function ignores
- * leading whitespace and is case-insensitive. It checks if the string,
+ * Parses the string argument as a boolean value. It checks if the string,
  * after ignoring leading whitespace, starts with any of the following
  * values: "true", "yes", "1", "on", "enable", or "enabled", followed by
  * either whitespace or the end of the string. If such a pattern is found,
