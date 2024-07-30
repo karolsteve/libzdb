@@ -162,7 +162,7 @@ static void _setBlob(T P, int parameterIndex, const void *x, int size) {
         assert(P);
         int i = checkAndSetParameterIndex(parameterIndex, P->parameterCount);
         P->paramValues[i] = (char *)x;
-        P->paramLengths[i] = (x) ? size : 0;
+        P->paramLengths[i] = size;
         P->paramFormats[i] = 1;
 }
 

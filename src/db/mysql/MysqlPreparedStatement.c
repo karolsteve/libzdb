@@ -174,12 +174,12 @@ static void _setBlob(T P, int parameterIndex, const void *x, int size) {
         int i = checkAndSetParameterIndex(parameterIndex, P->parameterCount);
         P->bind[i].buffer_type = MYSQL_TYPE_BLOB;
         P->bind[i].buffer = (void*)x;
-        if (! x) {
-                P->params[i].length = 0;
-                P->bind[i].is_null = &yes;
-        } else {
+        if (size > 0) {
                 P->params[i].length = size;
                 P->bind[i].is_null = 0;
+        } else {
+                P->params[i].length = 0;
+                P->bind[i].is_null = &yes;
         }
         P->bind[i].length = &P->params[i].length;
 }

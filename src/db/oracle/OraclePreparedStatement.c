@@ -230,11 +230,11 @@ static void _setBlob(T P, int parameterIndex, const void *x, int size) {
         assert(P);
         int i = checkAndSetParameterIndex(parameterIndex, P->parameterCount);
         P->params[i].type.blob = x;
-        if (x) {
+        if (size > 0) {
                 P->params[i].length = size;
                 P->params[i].is_null = OCI_IND_NOTNULL;
         } else {
-                P->params[i].length = size;
+                P->params[i].length = 0;
                 P->params[i].is_null = OCI_IND_NULL;
         }
         P->lastError = OCIBindByPos2(P->stmt, &P->params[i].bind, P->err, parameterIndex, (void *)P->params[i].type.blob,

@@ -117,6 +117,7 @@ void PreparedStatement_setDouble(T P, int parameterIndex, double x) {
 
 void PreparedStatement_setBlob(T P, int parameterIndex, const void *x, int size) {
 	assert(P);
+        if (size < 0) size = 0;
         P->op->setBlob(P->D, parameterIndex, x, size);
 }
 
@@ -129,7 +130,7 @@ void PreparedStatement_setTimestamp(T P, int parameterIndex, time_t x) {
 
 void PreparedStatement_setNull(T P, int parameterIndex) {
         assert(P);
-        PreparedStatement_setString(P, parameterIndex, NULL);
+        P->op->setString(P->D, parameterIndex, NULL, 0);
 }
 
 

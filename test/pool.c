@@ -189,11 +189,11 @@ static void testPool(const char *testURL) {
                         PreparedStatement_execute(pre);
                 }
                 /* Add a database null blob value for id = 5 */
-                PreparedStatement_setBlob(pre, 1, NULL, 0);
+                PreparedStatement_setNull(pre, 1);
                 PreparedStatement_setInt(pre, 2, 5);
                 PreparedStatement_execute(pre);
-                /* Add a database null string value for id = 1 */
-                PreparedStatement_setString(pre, 1, NULL);
+                /* Add a database null value for id = 1 */
+                PreparedStatement_setNull(pre, 1);
                 PreparedStatement_setInt(pre, 2, 1);
                 PreparedStatement_execute(pre);
                 /* Add a large blob */
