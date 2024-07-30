@@ -234,7 +234,7 @@ static void testPool(const char *testURL) {
                         const char *name = ResultSet_getString(rset, 2);
                         double percent = ResultSet_getDoubleByName(rset, "percent");
                         const char *blob = (char*)ResultSet_getBlob(rset, 4, &imagesize);
-                        printf("\t%-5d%-16s%-10.2f%-16.38s\n", id, name ? name : "null", percent, imagesize ? blob : "");
+                        printf("\t%-5d%-16s%-10.2f%-16.38s\n", id, name ? name : "null", percent, imagesize ? blob : "null");
                 }
                 // Column count
                 rset = Connection_executeQuery(con, "select image from zild_t where id=12;");
