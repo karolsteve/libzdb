@@ -246,19 +246,29 @@ void PreparedStatement_setBlob(T P, int parameterIndex, const void *x, int size)
  * @brief Sets the *in* parameter at index `parameterIndex` to the
  * given Unix timestamp value.
  *
- * The timestamp value given in `x` is expected to be in the GMT timezone.
- * For instance, a value returned by time(3) which represents the system's notion
- * of the current Greenwich time. *SQLite* does not have temporal SQL data types
- * per se and using this method with SQLite will store the timestamp value as a
- * numerical type, as-is. This is usually what you want; it is fast, compact
- * and unambiguous.
+ * The timestamp value given in `x` is expected to be a UTC timestamp,
+ * representing the number of seconds since the Unix epoch, regardless of
+ * the system's local timezone. For instance, a value returned by `time(3)`
+ * is appropriate for this parameter.
+ *
+ * Note on database-specific behavior:
+ * - SQLite: Stores the time_t value as a 64-bit integer. This preserves
+ *   the exact UTC timestamp, which can be correctly interpreted in any 
+ *   timezone when retrieved.
+ * - MySQL, PostgreSQL and Oracle: Convert and store the timestamp in their
+ *   respective datetime formats, preserving the UTC value.
+ *
+ * This approach ensures consistent timestamp handling across different timezones
+ * and database systems. When retrieving the timestamp, use appropriate time
+ * conversion functions to interpret the value in the desired timezone.
  *
  * @param P A PreparedStatement object
- * @param parameterIndex The first parameter is 1, the second is 2,..
- * @param x The GMT timestamp value to set. E.g. a value returned by time(3)
+ * @param parameterIndex The first parameter is 1, the second is 2, ...
+ * @param x The UTC timestamp value to set. E.g., a value returned by time(3)
  * @exception SQLException If a database access error occurs or if parameter
  * index is out of range
- * @see SQLException.h ResultSet_getTimestamp
+ * @see SQLException.h
+ * @see ResultSet_getTimestamp
  */
 void PreparedStatement_setTimestamp(T P, int parameterIndex, time_t x);
 
