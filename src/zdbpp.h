@@ -73,10 +73,10 @@
  * pool.start();
  * ```
  *
- * A ConnectionPool is neither copyable or movable. It is designed to be a long-lived
- * object that manages database connections throughout the lifetime of your application.
- * Typically, you would instantiate one or more ConnectionPool objects as part of a
- * resource management class or in the global scope of your application.
+ * A ConnectionPool is designed to be a long-lived object that manages database
+ * connections throughout the lifetime of your application. Typically, you would
+ * instantiate one or more ConnectionPool objects as part of a resource management
+ * class or in the global scope of your application.
  *
  * ### Best Practices for Using ConnectionPool
  *
@@ -156,10 +156,26 @@
  *
  * ### Transaction Example
  *
- * If an exception occurs at any point before commit() is called,
- * the transaction will be automatically rolled back when the
- * Connection object goes out of scope and is returned to the pool.
- * This ensures data integrity even in the face of exceptions.
+ * ```cpp
+ * Connection con = pool.getConnection();
+ *
+ * // Use default isolation level
+ * con.beginTransaction();
+ * con.execute("UPDATE accounts SET balance = balance - ? WHERE id = ?", 100.0, 1);
+ * con.commit();
+ *
+ * // Alternatively, specify the transaction's isolation level
+ * con.beginTransaction(TRANSACTION_SERIALIZABLE));
+ * con.execute("UPDATE accounts SET balance = balance + ? WHERE id = ?", 100.0, 2);
+ * con.commit();
+ * ```
+ *
+ * ## Exception Handling
+ *
+ * All database-related errors are thrown as `sql_exception`, which derives from
+ * `std::runtime_error`.
+ *
+ * ### Example of Exception Handling
  *
  * ```cpp
  * try {
@@ -172,24 +188,7 @@
  *     // Connection is automatically returned to pool when it goes out of scope
  *     // If an exception occurred before commit, it will automatically rollback
  * } catch (const sql_exception& e) {
- *     std::cerr << "Operation failed: " << e.what() << std::endl;
- * }
- * ```
- *
- * ## Exception Handling
- *
- * All database-related errors are thrown as `sql_exception`, which derives from
- * `std::runtime_error`.
- *
- * ### Example of Exception Handling
- *
- * ```cpp
- * try {
- *     auto con = pool.getConnection();
- *     con.execute("INSERT INTO users (name, email) VALUES (?, ?)", "John Doe", "john@example.com");
- * } catch (const zdb::sql_exception& e) {
- *     std::cerr << "Database error occurred: " << e.what() << std::endl;
- *     // Handle the error appropriately
+ *     std::cerr << "Transfer failed: " << e.what() << std::endl;
  * }
  * ```
  * Key points about exception handling in this library:
@@ -1124,10 +1123,13 @@ namespace zdb {
             if constexpr (std::is_same_v<std::remove_cvref_t<T>, std::nullptr_t>) {
                 setNull(parameterIndex);
             } else if constexpr (Stringable<std::remove_cvref_t<T>>) {
-                store_[parameterIndex] = std::string_view(x);
-                except_wrapper(PreparedStatement_setString(t_, parameterIndex, std::string_view(x).data()));
+                std::string_view sv(x);
+                store_[parameterIndex] = sv;
+                except_wrapper(PreparedStatement_setSString(t_, parameterIndex, sv.data(), static_cast<int>(sv.size())));
             } else if constexpr (Numeric<std::remove_cvref_t<T>>) {
-                if constexpr (sizeof(T) <= sizeof(int)) {
+                if constexpr (std::is_floating_point_v<std::remove_cvref_t<T>>) {
+                    except_wrapper(PreparedStatement_setDouble(t_, parameterIndex, static_cast<double>(x)));
+                } else if constexpr (sizeof(T) <= sizeof(int)) {
                     except_wrapper(PreparedStatement_setInt(t_, parameterIndex, static_cast<int>(x)));
                 } else {
                     except_wrapper(PreparedStatement_setLLong(t_, parameterIndex, static_cast<long long>(x)));
@@ -1434,10 +1436,13 @@ namespace zdb {
         /**
          * @brief Begins a new transaction with optional isolation level.
          *
-         * Usage:
+         * Example usage:
          * @code
-         *   connection.beginTransaction(); // Uses default isolation level
-         *   connection.beginTransaction(TRANSACTION_SERIALIZABLE); // Specifies isolation level
+         *   // Use default isolation level
+         *   connection.beginTransaction();
+         *
+         *   // Specify isolation level
+         *   connection.beginTransaction(TRANSACTION_SERIALIZABLE);
          * @endcode
          *
          * @param type The transaction isolation level (default: TRANSACTION_DEFAULT).
@@ -1723,19 +1728,27 @@ namespace zdb {
      *
      * The pool is designed to dynamically manage the number of active connections
      * based on usage patterns. A `reaper` thread is automatically started when the
-     * pool is initialized, performing two critical functions:
+     * pool is initialized, performing two functions:
      *
-     * 1. Sweeping through the pool at regular intervals (default every 60 seconds)
+     * 1. Sweep through the pool at regular intervals (default every 60 seconds)
      *    to close connections that have been inactive for a specified time (default
      *    90 seconds).
-     * 2. Performing periodic validation (ping test) on idle connections to ensure
+     * 2. Perform periodic validation (ping test) on idle connections to ensure
      *    they remain valid and responsive.
+     *
+     * ## Realtime inspection:
+     *
+     * Three methods can be used to inspect the pool at runtime. The method
+     * size() returns the number of connections in the pool, that is, both active
+     * and inactive connections. The method active() returns the number of active
+     * connections, i.e., those connections in current use by your application.
+     * The method isFull() can be used to check if the pool is full and unable to
+     * return a connection.
      *
      * ## Example Usage:
      *
      * @code
-     * URL url("mysql://localhost/test?user=root&password=swordfish");
-     * ConnectionPool pool(url);
+     * ConnectionPool pool("mysql://localhost/test?user=root&password=swordfish");
      * pool.start();
      * // ...
      * Connection con = pool.getConnection();
@@ -1846,7 +1859,8 @@ namespace zdb {
          * `connectionTimeout` seconds. The default connectionTimeout is
          * 90 seconds.
          *
-         * @param connectionTimeout The timeout value in seconds.
+         * @param connectionTimeout The timeout value in seconds. It is a
+         * checked runtime error for connectionTimeout to be <= 0
          */
         void setConnectionTimeout(int connectionTimeout) noexcept {
             ConnectionPool_setConnectionTimeout(t_, connectionTimeout);
@@ -1894,7 +1908,8 @@ namespace zdb {
          * called after start, the changes will take effect on the next sweep cycle.
          *
          * @param sweepInterval Number of seconds between sweeps of the reaper thread.
-         *        Set to 0 or a negative value to disable the reaper thread.
+         *        Set to 0 or a negative value to disable the reaper thread, _before_
+         *        calling ConnectionPool::start().
          */
         void setReaper(int sweepInterval) noexcept {
             ConnectionPool_setReaper(t_, sweepInterval);
@@ -1958,21 +1973,17 @@ namespace zdb {
          *
          * The returned Connection is guaranteed to be alive and connected to the database.
          *
-         * An sql_exception may be thrown if a database error occurs (e.g., network issues, database unavailability).
+         * An sql_exception may be thrown if the pool is full or if a database error occurs
+         * (e.g., network issues, database unavailability).
          *
          * Here's a basic example of how to use getConnection and handle potential errors:
          *
          * ```cpp
-         * if (pool.isFull()) {
-         *     // Consider increasing pool size before trying to get a connection
-         * }
-         *
          * try {
          *     Connection con = pool.getConnection();
          *     // Use the connection ...
          * } catch (const sql_exception& e) {
-         *         std::cerr << "Error: " << e.what() << std::endl;
-         *     }
+         *     std::cerr << "Error: " << e.what() << std::endl;
          * }
          * ```
          *
