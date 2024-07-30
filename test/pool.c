@@ -663,7 +663,7 @@ static void testPool(const char *testURL) {
                         PreparedStatement_setString(p, 2, "10:12:42");
                 }
                 PreparedStatement_setString(p, 3, "2013-12-28 10:12:42");
-                PreparedStatement_setTimestamp(p, 4, 1387066378);
+                PreparedStatement_setTimestamp(p, 4, 1388225562);
                 PreparedStatement_execute(p);
                 ResultSet_T r = Connection_executeQuery(con, "select * from zild_t");
                 if (ResultSet_next(r)) {
@@ -694,14 +694,14 @@ static void testPool(const char *testURL) {
                         assert(datetime.tm_sec == 42);
                         assert(datetime.TM_GMTOFF == 0);
                         // Check timestamp
-                        assert(timestamp == 1387066378);
+                        assert(timestamp == 1388225562);
                         // Check timestamp as datetime
                         assert(timestampAsTm.tm_year == 2013);
                         assert(timestampAsTm.tm_mon == 11); // Remember month - 1
-                        assert(timestampAsTm.tm_mday == 15);
-                        assert(timestampAsTm.tm_hour == 0);
+                        assert(timestampAsTm.tm_mday == 28);
+                        assert(timestampAsTm.tm_hour == 10);
                         assert(timestampAsTm.tm_min == 12);
-                        assert(timestampAsTm.tm_sec == 58);
+                        assert(timestampAsTm.tm_sec == 42);
                         assert(timestampAsTm.TM_GMTOFF == 0);
                         // Result
                         printf("\tDate: %s, Time: %s, DateTime: %s\n\tTimestamp as numeric: %lld, Timestamp as string: %s\n",
