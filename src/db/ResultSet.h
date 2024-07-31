@@ -32,8 +32,9 @@
 
 
 /**
- * A **ResultSet** represents a database result set. A ResultSet is
- * created by executing a SQL SELECT statement using either
+ * @brief A **ResultSet** represents a database result set.
+ *
+ * A ResultSet is created by executing a SQL SELECT statement using either
  * Connection_executeQuery() or PreparedStatement_executeQuery().
  *
  * A ResultSet maintains a cursor pointing to its current row of data.
