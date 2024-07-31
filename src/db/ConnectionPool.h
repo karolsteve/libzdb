@@ -574,7 +574,6 @@ int ConnectionPool_active(T P);
  */
 bool ConnectionPool_isFull(T P);
 
-
 /// @}
 /// @name Class functions
 /// @{
