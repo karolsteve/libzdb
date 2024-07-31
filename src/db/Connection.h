@@ -450,7 +450,7 @@ long long Connection_rowsChanged(T C);
  * Executes the given SQL statement, which may be an INSERT, UPDATE,
  * or DELETE statement or an SQL statement that returns nothing, such
  * as an SQL DDL statement. Several SQL statements can be used in the
- * sql parameter string, each separated with the *;* SQL
+ * sql parameter string, each separated with the `;` SQL
  * statement separator character. **Note**, calling this method
  * clears any previous ResultSets associated with the Connection.
  *
