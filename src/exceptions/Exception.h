@@ -29,12 +29,14 @@
 #include <pthread.h>
 
 /**
- * An **Exception** indicates an error condition from which recovery may
- * be possible. The Library *raises* exceptions, which can be handled by
- * recovery code, if recovery is possible. When an exception is raised, it is
- * handled by the handler that was most recently instantiated. If no handlers
- * are defined an exception will cause the library to call its abort handler 
- * to abort with an error message. 
+ * @brief An **Exception** indicates an error condition from which recovery may
+ * be possible.
+ *
+ * The Library *raises* exceptions, which can be handled by recovery code, if
+ * recovery is possible. When an exception is raised, it is handled by the
+ * handler that was most recently instantiated. If no handlers are defined an
+ * exception will cause the library to call its abort handler to abort with
+ * an error message.
  *
  * Handlers are instantiated by the TRY-CATCH and TRY-FINALLY statements, 
  * which are implemented as macros in this interface. These statements handle 
