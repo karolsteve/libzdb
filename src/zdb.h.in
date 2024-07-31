@@ -58,4 +58,59 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
+
+
+#ifndef __cplusplus
+/* --------------------------------------------------------- Utility Macro */
+
+
+/**
+ * @brief Provides a default value if the expression is NULL, 0, or negative.
+ *
+ * The valueOr_ macro is a convenient way to handle potentially unset or error
+ * values returned by libzdb functions. It works with pointers, integers, and
+ * floating-point types.
+ *
+ * For pointers:
+ *   - Returns the default value if the expression evaluates to NULL.
+ *   - Otherwise, returns the original pointer value.
+ *
+ * For integers and floating-point types:
+ *   - Returns the default value if the expression evaluates to 0 or any negative value.
+ *   - Otherwise, returns the original numeric value.
+ *
+ * @param expr The expression to evaluate (typically a libzdb function call)
+ * @param default_value The value to return if expr is NULL, 0, or negative
+ *
+ * @return If expr is not NULL, 0, or negative, returns expr.
+ *         Otherwise, returns default_value.
+ *
+ * @note The types of expr and default_value should be compatible to avoid
+ *       unexpected behavior.
+ *
+ * @example
+ *
+ * // Usage with string (pointer) return type
+ * const char* host = valueOr_(URL_getHost(url), "localhost");
+ * printf("Host: %s\n", host);
+ *
+ * // Usage with integer return type
+ * int port = valueOr_(ResultSet_getInt(r, 1), 5432);
+ * printf("Port: %d\n", port);
+ *
+ * // Usage with floating-point return type
+ * double percent = valueOr_(ResultSet_getDouble(r, 1), 1.0);
+ * printf("Percent: %.1f\n", percent);
+ *
+ * @note The usual macro caveats apply. This macro may evaluate the expression several
+ *       times. It's safe to use with variables and repeatable function calls, but be
+ *       cautious with expressions that might have side effects or may return different
+ *       values on subsequent calls.
+ *
+ * @note While this macro works for most libzdb return types, be cautious when using
+ *       it with unsigned integer types, where only the == 0 condition is relevant.
+ */
+#define valueOr_(expr, default_value) (((expr) < 0 || (expr) == 0) ? (default_value) : (expr))
+
+#endif /* not __cplusplus */
 #endif
