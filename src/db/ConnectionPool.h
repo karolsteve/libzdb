@@ -28,7 +28,7 @@
 
 
 /**
- * A **ConnectionPool** represents a database connection pool.
+ * @brief A **ConnectionPool** represents a database connection pool.
  *
  * A connection pool can be used to get a connection to a database and
  * execute statements. This class opens a number of database
@@ -566,11 +566,13 @@ int ConnectionPool_active(T P);
 /**
  * @brief Checks if the pool is full.
  *
- * I.e., if the number of *active* connections in the pool is equal
- * to max connections and the pool is unable to return a connection
+ * The pool is full if the number of *active* connections equals max
+ * connections and the pool is unable to return a connection.
  *
  * @param P A ConnectionPool object
  * @return true if pool is full, false otherwise
+ * @note A full pool is unlikely to occur in practice if you ensure that
+ *       connections are returned to the pool after use.
  */
 bool ConnectionPool_isFull(T P);
 

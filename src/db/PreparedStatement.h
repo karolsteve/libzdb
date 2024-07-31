@@ -32,10 +32,11 @@
 
 
 /**
- * A **PreparedStatement** represents a single SQL statement pre-compiled
- * into byte code for later execution. The SQL statement may contain
- * *in* parameters of the form "?". Such parameters represent
- * unspecified literal values (or "wildcards") to be filled in later by the
+ * @brief A **PreparedStatement** represents a single SQL statement pre-compiled
+ * into byte code for later execution.
+ *
+ * The SQL statement may contain *in* parameters of the form `?`. Such parameters
+ * represent unspecified literal values (or "wildcards") to be filled in later by the
  * various setter methods defined in this interface. Each *in* parameter has an
  * associated index number which is its sequence in the statement. The first
  * *in* '?' parameter has index 1, the next has index 2 and so on. A

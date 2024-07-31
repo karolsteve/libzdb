@@ -28,7 +28,7 @@
 
 
 /**
- * A **Connection** represents a connection to a SQL database system.
+ * @brief A **Connection** represents a connection to a SQL database system.
  *
  * Use a Connection to execute SQL statements. There are three ways to
  * execute statements: Connection_execute() is used to execute SQL
@@ -153,29 +153,29 @@ typedef enum {
 
     /**
      * Lowest isolation level. Transactions can read uncommitted data.
-     * Supported by: MySQL
+     * Supported by: MySQL.
      * Not supported by: PostgreSQL, Oracle, SQLite
      */
     TRANSACTION_READ_UNCOMMITTED,
 
     /**
      * Prevents dirty reads. A transaction only sees data committed before the transaction began.
-     * Supported by: MySQL, PostgreSQL, Oracle
+     * Supported by: MySQL, PostgreSQL, Oracle.
      * Not applicable to SQLite (always SERIALIZABLE)
      */
     TRANSACTION_READ_COMMITTED,
 
     /**
      * Prevents non-repeatable reads.
-     * Supported by: MySQL, PostgreSQL
-     * Not supported by: Oracle
+     * Supported by: MySQL, PostgreSQL.
+     * Not supported by: Oracle.
      * Not applicable to SQLite (always SERIALIZABLE)
      */
     TRANSACTION_REPEATABLE_READ,
 
     /**
      * Highest isolation level. Prevents dirty reads, non-repeatable reads, and phantom reads.
-     * Supported by: MySQL, PostgreSQL, Oracle
+     * Supported by: MySQL, PostgreSQL, Oracle.
      * Default and only level for SQLite
      */
     TRANSACTION_SERIALIZABLE,
