@@ -28,35 +28,50 @@
 
 
 /**
- * **URL** represents an immutable Uniform Resource Locator.
- * A Uniform Resource Locator (URL) is used to uniquely identify a
+ * @brief **URL** represents an immutable Uniform Resource Locator.
+ *
+ * A Uniform Resource Locator (URL), is used to uniquely identify a
  * resource on the Internet. The URL is a compact text string with a
  * restricted syntax that consists of four main components:
  *
  * ```
- * <protocol>://<authority><path>?<query>
+ * protocol://<authority><path><query>
  * ```
  *
- * The `<protocol>` part is mandatory, the other components may or
- * may not be present in a URL string. For instance, the
- * `file` protocol only uses the path component while an
- * `http` protocol may use all components. Here is an
- * example where all components are used:
- *
- * ```
- * http://user:password@www.foo.bar:8080/document/index.csp?querystring#ref
- * ```
+ * The `protocol` part is mandatory, the other components may or may not
+ * be present in an URL string. For instance the `file` protocol only use
+ * the path component while a `http` protocol may use all components.
  *
  * The following URL components are automatically unescaped according to the escaping
- * mechanism defined in RFC 2396: `credentials`, `path`, and parameter
- * `values`.
+ * mechanism defined in RFC 2396; `credentials`, `path` and parameter
+ * `values`. If you use a password with non-URL safe characters, you must URL
+ * escape the value.
  *
- * An *IPv6 address* can be used for host as defined in
- * [RFC2732](https://www.ietf.org/rfc/rfc2732.txt) by enclosing the
- * address in [brackets]. For instance, mysql://[2010:836B:4179::836B:4179]:3306/test
+ * An <em>IPv6 address</em> can be used for host as defined in
+ * <a href="https://www.ietf.org/rfc/rfc2732.txt">RFC2732</a> by enclosing the
+ * address in [brackets]. For instance,
+ * `mysql://[2010:836B:4179::836B:4179]:3306/test`
  *
- * For more information about the URL syntax and specification, see
- * [RFC2396 - Uniform Resource Identifiers (URI): Generic Syntax](https://www.ietf.org/rfc/rfc2396.txt)
+ * For more information about the URL syntax and specification, see,
+ * <a href="https://www.ietf.org/rfc/rfc2396.txt">RFC2396 -
+ * Uniform Resource Identifiers (URI): Generic Syntax</a>
+ *
+ * ### Example:
+ *
+ * @code
+ * URL_T url = URL_new("postgresql://user:password@example.com:5432/database?use-ssl=true");
+ *
+ * // Retrieve and print various components of the URL
+ * printf("Protocol: %s\n", URL_getProtocol(url));
+ * printf("Host:     %s\n", valueOr_(URL_getHost(url), "Not specified"));
+ * printf("Port:     %d\n", valueOr_(URL_getPort(url), -1));
+ * printf("User:     %s\n", valueOr_(URL_getUser(url), "Not specified"));
+ * printf("Password. %s\n", valueOr_(URL_getPassword(url), "Not specified"));
+ * printf("Path:     %s\n", valueOr_(URL_getPath(url), "Not specified"));
+ *
+ * // Get a specific parameter value
+ * printf("SSL Enabled: %s\n", valueOr_(URL_getParameter(url, "use-ssl"), "false"));
+ * @endcode
  *
  * @file
  */
