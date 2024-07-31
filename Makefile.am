@@ -60,7 +60,7 @@ API_INTERFACES  = src/zdb.h src/zdbpp.h src/db/ConnectionPool.h \
 
 nobase_nodist_include_HEADERS = $(patsubst %, $(LIBRARY_NAME)/%, $(notdir $(API_INTERFACES)))
 
-libzdb_la_LDFLAGS = $(DBLDFLAGS) -version-info 15:0:0
+libzdb_la_LDFLAGS = $(DBLDFLAGS) -version-info 16:0:0
 
 BUILT_SOURCES   = $(nobase_nodist_include_HEADERS)
 
@@ -77,35 +77,19 @@ dist-hook::
               $(distdir)/tools/bin/filterh
 	-rm -f $(distdir)/test/Makefile
         
-clean-local:
+clean-local::
 		-rm -f `find src -name "*.o" -o -name "*.lo" -o -name "*.loT" \
                 -o -name "*~" -o -name ".#*" -o -name "core*"`
-		@echo "Cleaning up Doxygen generated files..."
-		@find doc/api-docs/ -type f ! -name 'database.png' \
-                                    ! -name 'database++.png' \
-                                    ! -name 'libzdboptions.css' \
-                                    ! -name 'oracleoptions.html' \
-                                    ! -name 'libzdb.css' \
-                                    ! -name 'mysqloptions.html' \
-                                    ! -name 'postgresoptions.html' \
-                                    -exec rm -f {} +
                 
-
 distclean-local::
 	-rm -f Makefile.in Makefile \
+ 		src/zdb.h \
                 libzdb-[0-9].*tar.gz
 	-rm -rf autom4te.cache/ \
                 build/ \
                 $(LIBRARY_NAME)
 	-rm -f tools/bin/filterh \
            src/xconfig.h.in
-
-                        
-cleanall: clean distclean
-	-rm -f configure conf/config.* \
-                $(pkgconfig_DATA) \
-                aclocal.m4
-	git clean -fxd
 
 verify: libzdb.la
 	cd $(srcdir)/test && $(MAKE) verify	
@@ -126,9 +110,26 @@ $(nobase_nodist_include_HEADERS): $(API_INTERFACES)
 	$(check-exit))
 
 #<< start-filter out
+clean-local::
+	@echo "Cleaning up Doxygen generated files..."
+	@find doc/api-docs/ -type f ! -name 'database.png' \
+                                    ! -name 'database++.png' \
+                                    ! -name 'libzdboptions.css' \
+                                    ! -name 'oracleoptions.html' \
+                                    ! -name 'libzdb.css' \
+                                    ! -name 'mysqloptions.html' \
+                                    ! -name 'postgresoptions.html' \
+                                    -exec rm -f {} +
+
 distclean-local::
 	-rm -f  src/net/URL.c \
             src/system/Time.c
+
+cleanall: clean distclean
+	-rm -f configure conf/config.* \
+                $(pkgconfig_DATA) \
+                aclocal.m4
+	git clean -fxd -e project.xcworkspace -e oci
 
 src/net/URL.c: src/net/URL.re
 	$(RE2C) $(RE2CFLAGS) $< > $@
