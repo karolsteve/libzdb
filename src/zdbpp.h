@@ -1263,7 +1263,7 @@ namespace zdb {
      * prepareStatement() is used to obtain a PreparedStatement object.
      *
      * The method executeQuery() will return an empty ResultSet (not null)
-     * if the SQL statement did not return any values. A ResultSet lives until the
+     * if the SQL statement did not return any values. A ResultSet is valid until the
      * next call to Connection execute or until the Connection is returned
      * to the ConnectionPool. If an error occurs during execution, an sql_exception
      * is thrown.
@@ -1932,10 +1932,12 @@ namespace zdb {
         /**
          * @brief Checks if the pool is full.
          *
-         * I.e., if the number of *active* connections in the pool is equal
-         * to max connections and the pool is unable to return a connection
+         * The pool is full if the number of *active* connections equals max
+         * connections and the pool is unable to return a connection.
          *
          * @return true if pool is full, false otherwise
+         * @note A full pool is unlikely to occur in practice if you ensure that
+         *       connections are returned to the pool after use.
          */
         [[nodiscard]] bool isFull() noexcept { return ConnectionPool_isFull(t_); }
         
