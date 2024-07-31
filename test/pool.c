@@ -6,15 +6,11 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-#include "URL.h"
+#include "zdb.h"
+
 #include "Thread.h"
 #include "Vector.h"
-#include "ResultSet.h"
-#include "PreparedStatement.h"
-#include "Connection.h"
-#include "ConnectionPool.h"
 #include "AssertException.h"
-#include "SQLException.h"
 
 
 /**
@@ -234,7 +230,7 @@ static void testPool(const char *testURL) {
                         const char *name = ResultSet_getString(rset, 2);
                         double percent = ResultSet_getDoubleByName(rset, "percent");
                         const char *blob = (char*)ResultSet_getBlob(rset, 4, &imagesize);
-                        printf("\t%-5d%-16s%-10.2f%-16.38s\n", id, name ? name : "null", percent, imagesize ? blob : "null");
+                        printf("\t%-5d%-16s%-10.2f%-16.38s\n", id, valueOr_(name, "null"), percent, valueOr_(blob, "null"));
                 }
                 // Column count
                 rset = Connection_executeQuery(con, "select image from zild_t where id=12;");
