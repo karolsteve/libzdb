@@ -29,7 +29,7 @@
 
 
 /**
- * Signals that an SQL specific exception has occurred.
+ * @brief Signals that an SQL specific exception has occurred.
  * @see Exception.h
  * @file
  */
