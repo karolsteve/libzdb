@@ -83,7 +83,7 @@ static bool _initaleDefiningBuffers(T R) {
         int deptlen;
         int sizelen = sizeof(deptlen);
         OCIParam* pard = NULL;
-        sword status;
+        __attribute__((unused)) sword status;
         for (int i = 1; i <= R->columnCount; i++) {
                 deptlen = 0;
                 /* The next two statements describe the select-list item, dname, and
