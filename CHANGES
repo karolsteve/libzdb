@@ -8,13 +8,13 @@ Version 3.4.0
 * New: Connection_beginTransactionType() can be used to
   specify a transaction's isolation level and characteristics
   when beginning a new transaction.
-* New: valueOr_ macro for safe handling of API return values:
+* New: valueOr macro for safe handling of API return values:
   - Provides a default for NULL, 0, or negative returns.
   - Works with pointers, integers, and floats.
   - Safely evaluates expressions only once.
   - Compatible with GCC and Clang (uses GNU C extension).
   Example:
-   const char* host = valueOr_(URL_getHost(url), "localhost");
+   const char* host = valueOr(URL_getHost(url), "localhost");
 * New: Enabled multi-thread mode for SQLite connections by default.
   This can improve performance in multi-threaded applications by
   allowing concurrent access to the database. Works with stock
