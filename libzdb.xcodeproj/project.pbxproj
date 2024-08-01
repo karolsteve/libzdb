@@ -854,7 +854,6 @@
 					/Applications/Postgres.app/Contents/Versions/latest/lib,
 					"$(SRCROOT)/.libs",
 					/usr/local/mysql/lib,
-					/opt/local/lib,
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MERGEABLE_LIBRARY = NO;
@@ -937,7 +936,6 @@
 					/Applications/Postgres.app/Contents/Versions/latest/lib,
 					"$(SRCROOT)/.libs",
 					/usr/local/mysql/lib,
-					/opt/local/lib,
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MERGEABLE_LIBRARY = NO;
