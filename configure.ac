@@ -2,7 +2,7 @@
 
 AC_PREREQ([2.53])
 
-AC_INIT([libzdb], [3.3.0], [bugs-libzdb@tildeslash.com])
+AC_INIT([libzdb], [3.4.0], [bugs-libzdb@tildeslash.com])
 AC_SUBST([VERSION_MAJOR], [`echo $PACKAGE_VERSION | cut -d. -f1`])
 AC_SUBST([VERSION_MINOR], [`echo $PACKAGE_VERSION | cut -d. -f2`])
 AC_SUBST([VERSION_REVISION], [`echo $PACKAGE_VERSION | cut -d. -f3`])
@@ -81,7 +81,19 @@ AS_IF([test "$STDC_VERSION" -ge 201710],
 )
 
 # Require C++20 or later to build C++ test code and use zdbpp.h
-# But we don't test the cpp compiler here as C++ is optional
+AC_LANG_PUSH([C++])
+AC_CACHE_CHECK([whether the C++ compiler supports C++20],
+    [ac_cv_cxx_compile_cxx20],
+    [AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
+        #include <version>
+        #if __cplusplus < 202002L
+        #error C++20 is not supported
+        #endif
+    ]])],
+    [AC_MSG_ERROR([Your compiler does not support C++20 or later])],
+    [ac_cv_cxx_compile_cxx20=yes])])
+CXXFLAGS="$CXXFLAGS -std=c++20"
+AC_LANG_POP([C++])
 
 # Check for C99 headers
 AC_CHECK_HEADERS([stdint.h stdbool.h], [], [AC_MSG_ERROR([toolchain does not have C99 headers])])
