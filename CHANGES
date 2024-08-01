@@ -1,27 +1,41 @@
-                        CHANGES version 3.3.1
+                        CHANGES version 3.4.0
 
               This file summarizes changes made since 1.0
               
-Version 3.3.1
+Version 3.4.0
 -------------
 
-* New: Connection_beginTransactionType() can be used used to
-  specify the desired transaction characteristics when
-  beginning a new transaction.
-* New: Use SQLITE_OPEN_NOMUTEX flag when opening SQLite
-  connections to enable multi-thread mode. This can improve
-  performance in multi-threaded applications by allowing
-  concurrent access to the database from multiple threads.
-  Works with stock libsqlite builds (SQLITE_THREADSAFE=1 or 2).
-  The URL property, serialized=true, can be used to set the
-  connection in serialized thread mode.
+* New: Connection_beginTransactionType() can be used to
+  specify a transaction's isolation level and characteristics
+  when beginning a new transaction.
+* New: valueOr_ macro for safe handling of API return values:
+  - Provides a default for NULL, 0, or negative returns.
+  - Works with pointers, integers, and floats.
+  - Safely evaluates expressions only once.
+  - Compatible with GCC and Clang (uses GNU C extension).
+  Example:
+   const char* host = valueOr_(URL_getHost(url), "localhost");
+* New: Enabled multi-thread mode for SQLite connections by default.
+  This can improve performance in multi-threaded applications by
+  allowing concurrent access to the database. Works with stock
+  libsqlite builds (SQLITE_THREADSAFE=1 or 2). The URL property,
+  serialized=true, can be used to set the connection and SQLite
+  back in serialized thread mode.
+* New: Added PreparedStatement_setSString() for setting a sized
+  string value. If the string length is known, using this
+  method is more efficient.
 * Fix: Disabled use of sqlite3_enable_shared_cache and
   SQLITE_OPEN_SHAREDCACHE with open_v2(). Although we did
   see some concurrency benefits with shared cache in the
-  old days, it is best not to use it due to some potential
+  past, it is best not to use it due to some potential
   nasty side-effects. SQLite also discourages its use. Luckily,
   stock libsqlite is built with shared cache disabled so our
   attempt to activate it was essentially a no-op in any case.
+* Fix: C++, added missing support for binding a floating
+  point value in PreparedStatement::bind()
+* Fix: C++, Use PreparedStatement_setSString() when binding
+  a std::string_view which is more efficient and safer.
+* Fix: Plus minor improvements and fixes
 
 Version 3.3.0
 -------------
