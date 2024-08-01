@@ -71,6 +71,9 @@ extern "C" {
  * values returned by libzdb functions. It works with pointers, integers, and
  * floating-point types.
  *
+ * This macro evaluates the expression only once, making it safe to use with
+ * function calls or expressions that may have side effects.
+ *
  * For pointers:
  *   - Returns the default value if the expression evaluates to NULL.
  *   - Otherwise, returns the original pointer value.
@@ -85,15 +88,14 @@ extern "C" {
  * @return If expr is not NULL, 0, or negative, returns expr.
  *         Otherwise, returns default_value.
  *
- * @note The types of expr and default_value should be compatible to avoid
- *       unexpected behavior.
+ * @note This macro uses a GNU C extension and is compatible with GCC and Clang.
+ *       It may not work with other C compilers.
  *
  * @example
- *
  * // Usage with string (pointer) return type
  * const char* host = valueOr_(URL_getHost(url), "localhost");
  * printf("Host: %s\n", host);
- *
+ * 
  * // Usage with integer return type
  * int port = valueOr_(ResultSet_getInt(r, 1), 5432);
  * printf("Port: %d\n", port);
@@ -101,16 +103,12 @@ extern "C" {
  * // Usage with floating-point return type
  * double percent = valueOr_(ResultSet_getDouble(r, 1), 1.0);
  * printf("Percent: %.1f\n", percent);
- *
- * @note The usual macro caveats apply. This macro may evaluate the expression several
- *       times. It's safe to use with variables and repeatable function calls, but be
- *       cautious with expressions that might have side effects or may return different
- *       values on subsequent calls.
- *
- * @note While this macro works for most libzdb return types, be cautious when using
- *       it with unsigned integer types, where only the == 0 condition is relevant.
  */
-#define valueOr_(expr, default_value) (((expr) < 0 || (expr) == 0) ? (default_value) : (expr))
-
+#define valueOr_(expr, default_value) \
+    ({ \
+        __typeof__(expr) _t = (expr); \
+        (_t < 0 || _t == 0) ? (default_value) : _t; \
+    })
+    
 #endif /* not __cplusplus */
 #endif
