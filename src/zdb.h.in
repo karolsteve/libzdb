@@ -67,7 +67,7 @@ extern "C" {
 /**
  * @brief Provides a default value if the expression is NULL, 0, or negative.
  *
- * The valueOr_ macro is a convenient way to handle potentially unset or error
+ * The valueOr macro is a convenient way to handle potentially unset or error
  * values returned by libzdb functions. It works with pointers, integers, and
  * floating-point types.
  *
@@ -93,18 +93,18 @@ extern "C" {
  *
  * @example
  * // Usage with string (pointer) return type
- * const char* host = valueOr_(URL_getHost(url), "localhost");
+ * const char* host = valueOr(URL_getHost(url), "localhost");
  * printf("Host: %s\n", host);
  * 
  * // Usage with integer return type
- * int port = valueOr_(ResultSet_getInt(r, 1), 5432);
+ * int port = valueOr(ResultSet_getInt(r, 1), 5432);
  * printf("Port: %d\n", port);
  *
  * // Usage with floating-point return type
- * double percent = valueOr_(ResultSet_getDouble(r, 1), 1.0);
+ * double percent = valueOr(ResultSet_getDouble(r, 1), 1.0);
  * printf("Percent: %.1f\n", percent);
  */
-#define valueOr_(expr, default_value) \
+#define valueOr(expr, default_value) \
     ({ \
         __typeof__(expr) _t = (expr); \
         (_t < 0 || _t == 0) ? (default_value) : _t; \
