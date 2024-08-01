@@ -67,7 +67,7 @@
  *     if (ResultSet_next(result)) {
  *         const char* name = ResultSet_getString(result, 1);
  *         int age = ResultSet_getInt(result, 2);
- *         printf("Name: %s, Age: %d\n", name ? name : "N/A", age);
+ *         printf("Name: %s, Age: %d\n", valueOr(name, "N/A"), age);
  *     }
  *     Connection_close(con);
  * }

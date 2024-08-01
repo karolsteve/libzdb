@@ -97,7 +97,7 @@
  * if (ResultSet_next(r)) 
  * {
  *     const char *count = ResultSet_getString(r, 1);
- *     printf("Number of employees: %s\n", count ? count : "none");
+ *     printf("Number of employees: %s\n", valueOr(count, "none"));
  * } 
  * else
  * {
