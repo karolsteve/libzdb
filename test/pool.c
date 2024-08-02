@@ -132,6 +132,8 @@ static void testPool(const char *testURL) {
                 ConnectionPool_start(pool);
                 con = ConnectionPool_getConnection(pool);
                 assert(con);
+                assert(IS(URL_getProtocol(url), Connection_type(con)));
+                printf("\tConnected to: %s\n", Connection_type(con));
                 TRY Connection_execute(con, "drop table zild_t;"); ELSE END_TRY;
                 Connection_execute(con, "%s", schema);
                 Connection_beginTransaction(con);

@@ -181,6 +181,12 @@ time_t Connection_getLastAccessedTime(T C) {
 /* ------------------------------------------------------------ Properties */
 
 
+const char* const Connection_type(T C) {
+        assert(C);
+        return C->op->name;
+}
+
+
 void Connection_setQueryTimeout(T C, int ms) {
         assert(C);
         assert(ms >= 0);
