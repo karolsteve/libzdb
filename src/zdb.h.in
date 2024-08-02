@@ -106,7 +106,7 @@ extern "C" {
  */
 #define valueOr(expr, default_value) \
     ({ \
-        typeof(expr) _t = (expr); \
+        __typeof__(expr) _t = (expr); \
         (_t > 0) ? _t : (default_value); \
     })
     
