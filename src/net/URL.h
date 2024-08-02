@@ -233,7 +233,7 @@ char *URL_unescape(char *url);
 /**
  * @brief Escape a URL string
  *
- * Converts unsafe characters to a hex (%HEXHEX) representation. The 
+ * Converts unsafe characters to a hex (%%HEXHEX) representation. The 
  * following URL unsafe characters are encoded: <code><>\"#%{}|^ []\`</code>
  * as well as characters in the interval 00-1F hex (0-31 decimal) and in
  * the interval 7F-FF (127-255 decimal). If the `url` parameter is NULL
