@@ -35,7 +35,6 @@ int zdb_sqlite3_prepare_v2(sqlite3 *db, const char *zSql, int nSql, sqlite3_stmt
 int zdb_sqlite3_exec(sqlite3 *db, const char *sql) __attribute__ ((visibility("hidden")));
 
 ResultSetDelegate_T SQLiteResultSet_new(Connection_T delegator, sqlite3_stmt *stmt, int keep) __attribute__ ((visibility("hidden")));
-PreparedStatementDelegate_T SQLitePreparedStatement_new(Connection_T delegator, sqlite3_stmt *stmt)
- __attribute__ ((visibility("hidden")));
+PreparedStatementDelegate_T SQLitePreparedStatement_new(Connection_T delegator, sqlite3_stmt *stmt) __attribute__ ((visibility("hidden")));
 
 #endif
