@@ -852,7 +852,6 @@
 				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = YES;
 				LIBRARY_SEARCH_PATHS = (
 					/Applications/Postgres.app/Contents/Versions/latest/lib,
-					"$(SRCROOT)/.libs",
 					/usr/local/mysql/lib,
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
@@ -934,7 +933,6 @@
 				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = YES;
 				LIBRARY_SEARCH_PATHS = (
 					/Applications/Postgres.app/Contents/Versions/latest/lib,
-					"$(SRCROOT)/.libs",
 					/usr/local/mysql/lib,
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
@@ -1100,10 +1098,7 @@
 				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				HEADER_SEARCH_PATHS = "$(inherited)";
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"/usr/local/mysql-8.0.32-macos13-arm64/lib",
-				);
+				LIBRARY_SEARCH_PATHS = "$(inherited)";
 				PRIVATE_HEADERS_FOLDER_PATH = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PUBLIC_HEADERS_FOLDER_PATH = "";
@@ -1125,10 +1120,7 @@
 				GCC_OPTIMIZATION_LEVEL = s;
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				HEADER_SEARCH_PATHS = "$(inherited)";
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"/usr/local/mysql-8.0.32-macos13-arm64/lib",
-				);
+				LIBRARY_SEARCH_PATHS = "$(inherited)";
 				PRIVATE_HEADERS_FOLDER_PATH = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PUBLIC_HEADERS_FOLDER_PATH = "";
