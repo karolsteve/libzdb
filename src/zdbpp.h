@@ -44,8 +44,7 @@
  *
  * <center><img src="database++.png" class="resp-img" style="width:700px"></center>
  *
- * This C++ interface for _libzdb_ offers a modern, type-safe way to interact with
- * various SQL databases from C++ applications.
+ * A modern, type-safe way to interact with various SQL databases from C++ applications.
  *
  * ## Features
  *
@@ -54,12 +53,6 @@
  * - Zero runtime configuration, connect using a URL scheme
  * - Supports MySQL, PostgreSQL, SQLite, and Oracle
  * - Modern C++ features (C++20 or later required)
- *
- * By combining the performance of optimized C code with the safety and
- * convenience of modern C++, this library ensures efficient and robust
- * database operations. The use of small, stack-allocated classes minimizes
- * memory usage and overhead, making it an ideal choice for high-performance
- * applications.
  *
  * ## Core Concepts
  *
