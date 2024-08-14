@@ -70,6 +70,7 @@ struct ConnectionPool_S {
         volatile bool stopped;
         int connectionTimeout;
         int initialConnections;
+        ConnectionPool_Type type;
 };
 
 int ZBDEBUG = false;
@@ -83,6 +84,22 @@ void(*AbortHandler)(const char *error) = NULL;
 
 
 /* ------------------------------------------------------- Private methods */
+
+
+static ConnectionPool_Type _getType(T P) {
+        const char *databaseType = URL_getProtocol(P->url);
+        if (IS(databaseType, "mysql")) {
+                return ConnectionPool_Mysql;
+        } else if (IS(databaseType, "postgresql")) {
+                return ConnectionPool_Postgresql;
+        } else if (IS(databaseType, "sqlite")) {
+                return ConnectionPool_Sqlite;
+        } else if (IS(databaseType, "oracle")) {
+                return ConnectionPool_Oracle;
+        } else {
+                return ConnectionPool_None;
+        }
+}
 
 
 static void _drainPool(T P) {
@@ -257,6 +274,7 @@ T ConnectionPool_new(URL_T url) {
         Sem_init(P->alarm);
         Mutex_init(P->mutex);
         P->doSweep = true;
+        P->type = _getType(P);
         P->sweepInterval = SQL_DEFAULT_SWEEP_INTERVAL;
         P->maxConnections = SQL_DEFAULT_MAX_CONNECTIONS;
         P->pool = Vector_new(SQL_DEFAULT_MAX_CONNECTIONS);
@@ -281,6 +299,12 @@ void ConnectionPool_free(T *P) {
 
 
 /* ------------------------------------------------------------ Properties */
+
+
+ConnectionPool_Type ConnectionPool_getType(T P) {
+        assert(P);
+        return P->type;
+}
 
 
 URL_T ConnectionPool_getURL(T P) {
@@ -355,6 +379,7 @@ void ConnectionPool_setReaper(T P, int sweepInterval) {
         }
         END_LOCK;
 }
+
 
 /* -------------------------------------------------------- Public methods */
 

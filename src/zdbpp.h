@@ -1807,6 +1807,13 @@ namespace zdb {
         /// @{
 
         /**
+         * @brief Retrieves the database type for this ConnectionPool
+         * @return The ConnectionPool_Type representing the database backend for this ConnectionPool
+         * @see ConnectionPool_Type
+         */
+        ConnectionPool_Type getType() const noexcept { return ConnectionPool_getType(t_); }
+
+        /**
          * @brief Gets the URL of the connection pool.
          * @return The URL of the connection pool.
          */

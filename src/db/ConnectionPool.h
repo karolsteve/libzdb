@@ -249,6 +249,19 @@
 #define T ConnectionPool_T
 typedef struct ConnectionPool_S *T;
 
+/**
+ * @brief Enumerates the supported database types for ConnectionPool
+ *
+ * This enum defines the various database backends that can be used
+ * with the ConnectionPool in the libzdb library.
+ */
+typedef enum {
+        ConnectionPool_None = 0,   /**< No database type set (default/uninitialized state) */
+        ConnectionPool_Sqlite,     /**< SQLite database connection */
+        ConnectionPool_Mysql,      /**< MySQL database connection */
+        ConnectionPool_Postgresql, /**< PostgreSQL database connection */
+        ConnectionPool_Oracle      /**< Oracle database connection */
+} ConnectionPool_Type;
 
 /**
  * Library Debug flag. If set to true, emit debug output
@@ -280,6 +293,16 @@ void ConnectionPool_free(T *P);
 
 /// @name Properties
 /// @{
+
+/**
+ * @brief Retrieves the database type for this ConnectionPool
+ *
+ * @param P A ConnectionPool object
+ * @return The ConnectionPool_Type representing the database backend for this ConnectionPool
+ * @see ConnectionPool_Type
+ */
+ConnectionPool_Type ConnectionPool_getType(T P);
+
 
 /**
  * @brief Returns this Connection Pool's URL
