@@ -146,7 +146,7 @@ static void _execute(T P) {
                         break;
                 default:
                         P->lastError = sqlite3_reset(P->stmt);
-                        THROW(SQLException, "%s", sqlite3_errmsg(P->db));
+                        THROW(SQLException, "Connection: %p -- %s", P->delegator, sqlite3_errmsg(P->db));
                         break;
         }
 }
@@ -156,7 +156,7 @@ static ResultSet_T _executeQuery(T P) {
         assert(P);
         if (P->lastError == SQLITE_OK)
                 return ResultSet_new(SQLiteResultSet_new(P->delegator, P->stmt, true), (Rop_T)&sqlite3rops);
-        THROW(SQLException, "%s", sqlite3_errmsg(P->db));
+        THROW(SQLException, "Connection: %p -- %s", P->delegator, sqlite3_errmsg(P->db));
         return NULL;
 }
 
