@@ -140,6 +140,15 @@ static void testStr(void) {
         }
         printf("=> Test6: OK\n\n");
         
+        printf("=> Test7: member\n");
+        {
+                const char *set[] = {"gif", "png", "jpg", "jpeg", "tiff", NULL};
+                assert(Str_member("jpg", set));
+                bool found = Str_member("shared-cache", (const char*[]){"abc", "123", "serialized", "shared-cache", "optimized", NULL});
+                assert(found);
+        }
+        printf("=> Test7: OK\n\n");
+
         
         printf("============> Str Tests: OK\n\n");
 }

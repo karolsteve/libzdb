@@ -96,6 +96,17 @@ bool Str_startsWith(const char *a, const char *b) {
 }
 
 
+bool Str_member(const char *s, const char **set) {
+        if (STR_DEF(s) && set) {
+                for (int i = 0; set[i]; i++) {
+                        if (Str_isEqual(set[i], s))
+                                return true;
+                }
+        }
+        return false;
+}
+
+
 char *Str_copy(char *dest, const char *src, int n) {
 	if (src && dest && (n > 0)) { 
         	char *t = dest;
