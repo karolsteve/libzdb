@@ -70,6 +70,9 @@ static int _options(URL_T url) {
         } else {
                 options |= SQLITE_OPEN_NOMUTEX;
         }
+        if (Str_parseBool(URL_getParameter(url, "shared-cache"))) {
+                options |= SQLITE_OPEN_SHAREDCACHE;
+        }
         return options;
 }
 

@@ -1692,6 +1692,7 @@ namespace zdb {
      *   if memory usage goes above the specified value [KB].
      * - `serialized=true` - Make SQLite switch to serialized mode
      *   if value is true, otherwise multi-thread mode is used (the default).
+     * - `shared-cache=true` - Make SQLite use shared-cache if value is true
      *
      * Example URL for SQLite (with recommended pragmas):
      * ```
