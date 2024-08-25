@@ -93,7 +93,9 @@ void Vector_insert(T V, int i, void *e) {
 	V->timestamp++;
         _ensureCapacity(V);
         if (i < V->length)
-                __builtin_memmove(&V->array[i + 1], &V->array[i], (V->length - i) * sizeof(void *));
+                __builtin_memmove(&V->array[i + 1], 
+                                  &V->array[i],
+                                  (V->length - i) * sizeof(void *));
         V->array[i] = e;
         V->length++;
 }
@@ -121,9 +123,11 @@ void *Vector_remove(T V, int i) {
 	assert(i >= 0 && i < V->length);
 	V->timestamp++;
  	void *x = V->array[i];
-        if (i < V->length - 1)
-                __builtin_memmove(&V->array[i], &V->array[i + 1], (V->length - i - 1) * sizeof(void *));
         V->length--;
+        if (i < V->length)
+                __builtin_memmove(&V->array[i], 
+                                  &V->array[i + 1],
+                                  (V->length - i) * sizeof(void *));
         return x;
 }
 
