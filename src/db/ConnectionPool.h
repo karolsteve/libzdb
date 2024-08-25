@@ -121,7 +121,10 @@
  *   if memory usage goes above the specified value [KB].
  * - `serialized=true` - Make SQLite switch to serialized mode
  *   if value is true, otherwise multi-thread mode is used (the default).
- * - `shared-cache=true` - Make SQLite use shared-cache if value is true
+ * - `shared-cache=true` - Make SQLite use shared-cache if value is true.
+ *   Using shared cache can significantly reduce database lock errors in
+ *   scenarios where two or more connections might write to the database
+ *   at the same time. Also build libzdb with `--enable-sqliteunlock`
  *
  * A URL for connecting to a SQLite database might look like this (with recommended pragmas):
  *
