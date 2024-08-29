@@ -40,13 +40,11 @@
 #include <unordered_map>
 
 /**
- *
  * @brief zdbpp.h - C++ Interface for libzdb
  *
  * <center><img src="database++.png" class="resp-img" style="width:700px"></center>
  *
- * This interface provides a C++ wrapper for libzdb, offering a convenient and 
- * type-safe way to interact with various SQL databases from C++ applications.
+ * A modern, type-safe way to interact with various SQL databases from C++ applications.
  *
  * ## Features
  *
@@ -1256,17 +1254,17 @@ namespace zdb {
      * execute statements: execute() is used to execute SQL
      * statements that do not return a result set. Such statements are INSERT,
      * UPDATE or DELETE. executeQuery() is used to execute a SQL
-     * SELECT statement and return a result set. These methods can only handle
-     * values which can be expressed as C-strings. If you need to handle binary
-     * data, such as inserting a blob value into the database, use a
-     * PreparedStatement object to execute the SQL statement. The factory method
-     * prepareStatement() is used to obtain a PreparedStatement object.
+     * SELECT statement and return a result set. These methods can handle
+     * various data types, including binary data, by automatically creating
+     * a PreparedStatement when arguments are provided. For more complex
+     * scenarios or when reusing statements, you can explicitly create a
+     * PreparedStatement object using the prepareStatement() method.
      *
      * The method executeQuery() will return an empty ResultSet (not null)
-     * if the SQL statement did not return any values. A ResultSet is valid until the
-     * next call to Connection execute or until the Connection is returned
-     * to the ConnectionPool. If an error occurs during execution, an sql_exception
-     * is thrown.
+     * if the SQL statement did not return any values. A ResultSet is valid 
+     * until the next call to Connection execute or until the Connection is
+     * returned to the ConnectionPool. If an error occurs during execution,
+     * an sql_exception is thrown.
      *
      * Any SQL statement that changes the database (basically, any SQL
      * command other than SELECT) will automatically start a transaction
@@ -1447,7 +1445,7 @@ namespace zdb {
          *
          * @param type The transaction isolation level (default: TRANSACTION_DEFAULT).
          *             @see TRANSACTION_TYPE enum for available options.
-         * @throws SQLException If a database error occurs or if a transaction is already in progress.
+         * @throws sql_exception If a database error occurs or if a transaction is already in progress.
          * @note All transactions must be ended with either commit() or rollback().
          *       Nested transactions are not supported.
          */
@@ -1465,7 +1463,7 @@ namespace zdb {
         
         /**
          * @brief Commits the current transaction.
-         * @throws SQLException If a database error occurs.
+         * @throws sql_exception If a database error occurs.
          */
         void commit() { except_wrapper(Connection_commit(t_)); }
         
@@ -1475,7 +1473,7 @@ namespace zdb {
          * This method will first call clear() before performing the rollback to
          * clear any statements in progress such as selects.
          *
-         * @throws SQLException If a database error occurs.
+         * @throws sql_exception If a database error occurs.
          */
         void rollback() { except_wrapper(Connection_rollback(t_)); }
         
@@ -1605,7 +1603,7 @@ namespace zdb {
          *
          * @param sql The SQL statement to prepare.
          * @return A PreparedStatement object.
-         * @throws SQLException If a database error occurs during preparation.
+         * @throws sql_exception If a database error occurs during preparation.
          *
          * Example usage:
          * @code
@@ -1717,6 +1715,10 @@ namespace zdb {
      *   if memory usage goes above the specified value [KB].
      * - `serialized=true` - Make SQLite switch to serialized mode
      *   if value is true, otherwise multi-thread mode is used (the default).
+     * - `shared-cache=true` - Make SQLite use shared-cache if value is true.
+     *   Using shared cache can significantly reduce database lock errors in
+     *   scenarios where two or more connections might write to the database
+     *   at the same time. Also build libzdb with `--enable-sqliteunlock`
      *
      * Example URL for SQLite (with recommended pragmas):
      * ```
@@ -1830,6 +1832,13 @@ namespace zdb {
         
         /// @name Properties
         /// @{
+
+        /**
+         * @brief Retrieves the database type for this ConnectionPool
+         * @return The ConnectionPool_Type representing the database backend for this ConnectionPool
+         * @see ConnectionPool_Type
+         */
+        ConnectionPool_Type getType() const noexcept { return ConnectionPool_getType(t_); }
 
         /**
          * @brief Gets the URL of the connection pool.

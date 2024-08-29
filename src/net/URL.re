@@ -53,7 +53,7 @@ typedef struct param_t {
 
 #define T URL_T
 struct URL_S {
-        int ip6;
+        bool ip6;
 	int port;
        	char *ref;
 	char *path;

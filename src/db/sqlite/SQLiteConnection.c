@@ -70,6 +70,9 @@ static int _options(URL_T url) {
         } else {
                 options |= SQLITE_OPEN_NOMUTEX;
         }
+        if (Str_parseBool(URL_getParameter(url, "shared-cache"))) {
+                options |= SQLITE_OPEN_SHAREDCACHE;
+        }
         return options;
 }
 
@@ -100,6 +103,7 @@ static sqlite3 *_doConnect(Connection_T delegator, char **error) {
 static bool _setProperties(T C, char **error) {
         URL_T url = Connection_getURL(C->delegator);
         const char **properties = URL_getParameterNames(url);
+        const char *handled_properties[] = {"serialized", "shared-cache", NULL};
         if (properties) {
                 StringBuffer_clear(C->sb);
                 for (int i = 0; properties[i]; i++) {
@@ -111,7 +115,7 @@ static bool _setProperties(T C, char **error) {
 #else
                                 DEBUG("heap_limit not supported by your sqlite3 version, please consider upgrading sqlite3\n");
 #endif
-                        } else if (IS(properties[i], "serialized")) {
+                        } else if (Str_member(properties[i], handled_properties)) {
                                 continue; // Handled in _doConnect, ignore
                         } else {
                                 StringBuffer_append(C->sb, "PRAGMA %s = %s; ", properties[i], URL_getParameter(url, properties[i]));

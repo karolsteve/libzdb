@@ -1,7 +1,19 @@
-                        CHANGES version 3.4.0
+                        CHANGES version 3.4.1
 
               This file summarizes changes made since 1.0
-              
+
+Version 3.5.x
+-------------
+
+* New: Enum ConnectionPool_Type and ConnectionPool_getType() which
+  returns the database type the ConnectionPool is connected to.
+* New: Reintroduce support for shared cache in SQLite, but make it
+  configurable. Using shared cache is beneficial (despite it being
+  deprecated). In multi-threaded scenarios where each thread has a
+  connection writing to the database, using shared cache together
+  with the unlock notify API can significantly reduce problems with
+  database lock errors.
+  
 Version 3.4.0
 -------------
 

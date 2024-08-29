@@ -85,6 +85,26 @@ bool Str_startsWith(const char *a, const char *b);
 
 
 /**
+ * Returns true if <i>s</i> is equal to a string in the <code>set</code> 
+ * of strings. It is an unchecked runtime error for the last element of
+ * the set not to be NULL
+ * <pre>
+ * char *ext = "jpg";
+ * const char *set[] = {"gif", "png", "jpg", "jpeg", "tiff", NULL};
+ * Str_member(ext, set) -> true
+ * Str_member("gif", (const char**){"foo", "bar", NULL}) -> false
+ * Str_member(ext, (const char*[]){"jpgn", NULL}) -> false
+ * Str_member(ext, NULL) -> false
+ * Str_member(NULL, NULL) -> false
+ * </pre>
+ * @param s The string to test
+ * @param set An array of C-strings. The last element in the array must be NULL
+ * @return true if s is a member of the set, otherwise false
+ */
+bool Str_member(const char *s, const char **set);
+
+
+/**
  * Strcpy that copy only <code>n</code> char from the given
  * string. The destination string, <code>dest</code>, is NUL
  * terminated at length <code>n</code> or if <code>src</code> is
@@ -177,19 +197,8 @@ double Str_parseDouble(const char *s);
  * <pre>
  * Str_parseBool("true")        -> true
  * Str_parseBool("TRUE")        -> true
- * Str_parseBool("yes")         -> true
- * Str_parseBool("  Yes  ")     -> true
- * Str_parseBool("1")           -> true
- * Str_parseBool(" 1 and 2")    -> true
- * Str_parseBool("on")          -> true
- * Str_parseBool("enable")      -> true
- * Str_parseBool("enabled")     -> true
- * Str_parseBool("truelove")    -> false
+ * Str_parseBool(" yes ")       -> true
  * Str_parseBool("yesterday")   -> false
- * Str_parseBool("1234")        -> false
- * Str_parseBool("only")        -> false
- * Str_parseBool("enabler")     -> false
- * Str_parseBool("enabledment") -> false
  * </pre>
  * @param s A string representing a boolean value.
  * @return true if 's' starts with a boolean value ("true", "yes", "1", "on",

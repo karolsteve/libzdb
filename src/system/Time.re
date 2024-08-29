@@ -296,32 +296,17 @@ struct tm *Time_toDateTime(const char *s, struct tm *t) {
 
 char *Time_toString(time_t time, char result[static 20]) {
         assert(result);
-        char x[2];
         struct tm ts = {.tm_isdst = -1};
         gmtime_r(&time, &ts);
         memcpy(result, "YYYY-MM-DD HH:MM:SS\0", 20);
         /*              0    5  8  11 14 17 */
-        _i2a((ts.tm_year+1900)/100, x);
-        result[0] = x[0];
-        result[1] = x[1];
-        _i2a((ts.tm_year+1900)%100, x);
-        result[2] = x[0];
-        result[3] = x[1];
-        _i2a(ts.tm_mon + 1, x); // Months in 01-12
-        result[5] = x[0];
-        result[6] = x[1];
-        _i2a(ts.tm_mday, x);
-        result[8] = x[0];
-        result[9] = x[1];
-        _i2a(ts.tm_hour, x);
-        result[11] = x[0];
-        result[12] = x[1];
-        _i2a(ts.tm_min, x);
-        result[14] = x[0];
-        result[15] = x[1];
-        _i2a(ts.tm_sec, x);
-        result[17] = x[0];
-        result[18] = x[1];
+        _i2a((ts.tm_year+1900)/100, &result[0]);
+        _i2a((ts.tm_year+1900)%100, &result[2]);
+        _i2a(ts.tm_mon + 1, &result[5]); // Months in 01-12
+        _i2a(ts.tm_mday, &result[8]);
+        _i2a(ts.tm_hour, &result[11]);
+        _i2a(ts.tm_min, &result[14]);
+        _i2a(ts.tm_sec, &result[17]);
 	return result;
 }
 

@@ -121,6 +121,10 @@
  *   if memory usage goes above the specified value [KB].
  * - `serialized=true` - Make SQLite switch to serialized mode
  *   if value is true, otherwise multi-thread mode is used (the default).
+ * - `shared-cache=true` - Make SQLite use shared-cache if value is true.
+ *   Using shared cache can significantly reduce database lock errors in
+ *   scenarios where two or more connections might write to the database
+ *   at the same time. Also build libzdb with `--enable-sqliteunlock`
  *
  * A URL for connecting to a SQLite database might look like this (with recommended pragmas):
  *
@@ -249,6 +253,19 @@
 #define T ConnectionPool_T
 typedef struct ConnectionPool_S *T;
 
+/**
+ * @brief Enumerates the supported database types for ConnectionPool
+ *
+ * This enum defines the various database backends that can be used
+ * with the ConnectionPool in the libzdb library.
+ */
+typedef enum {
+        ConnectionPool_None = 0,   /**< No database type set (default/uninitialized state) */
+        ConnectionPool_Sqlite,     /**< SQLite database connection */
+        ConnectionPool_Mysql,      /**< MySQL database connection */
+        ConnectionPool_Postgresql, /**< PostgreSQL database connection */
+        ConnectionPool_Oracle      /**< Oracle database connection */
+} ConnectionPool_Type;
 
 /**
  * Library Debug flag. If set to true, emit debug output
@@ -280,6 +297,16 @@ void ConnectionPool_free(T *P);
 
 /// @name Properties
 /// @{
+
+/**
+ * @brief Retrieves the database type for this ConnectionPool
+ *
+ * @param P A ConnectionPool object
+ * @return The ConnectionPool_Type representing the database backend for this ConnectionPool
+ * @see ConnectionPool_Type
+ */
+ConnectionPool_Type ConnectionPool_getType(T P);
+
 
 /**
  * @brief Returns this Connection Pool's URL

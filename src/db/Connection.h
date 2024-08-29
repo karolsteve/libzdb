@@ -247,17 +247,6 @@ time_t Connection_getLastAccessedTime(T C) __attribute__ ((visibility("hidden"))
 /// @{
 
 /**
- * @brief Gets the database type
- *
- * Use Connection_getURL() to inspect the full Connection URL
- *
- * @param C A Connection object
- * @return A short string describing the database type for this connection
- */
-const char* const Connection_type(T C);
-
-
-/**
  * @brief Sets the query timeout for this Connection.
  *
  * If the limit is exceeded, the statement will return immediately with an 
