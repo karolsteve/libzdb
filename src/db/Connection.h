@@ -473,7 +473,7 @@ void Connection_rollback(T C);
  *
  * @see ResultSet.h
  */
-long long Connection_lastRowId(T C);long long Connection_lastRowId(T C);
+long long Connection_lastRowId(T C);
 
 
 /**
