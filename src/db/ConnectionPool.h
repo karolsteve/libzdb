@@ -123,8 +123,8 @@
  *   if value is true, otherwise multi-thread mode is used (the default).
  * - `shared-cache=true` - Make SQLite use shared-cache if value is true.
  *   Using shared cache can significantly reduce database lock errors in
- *   scenarios where two or more connections might write to the database
- *   at the same time. Also build libzdb with `--enable-sqliteunlock`
+ *   some scenarios where two or more connections might write to the database.
+ *   It is also recommended to build libsqlite and libzdb with unlock  notify.
  *
  * A URL for connecting to a SQLite database might look like this (with recommended pragmas):
  *
