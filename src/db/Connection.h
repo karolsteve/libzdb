@@ -439,8 +439,52 @@ void Connection_rollback(T C);
  * @brief Gets the last inserted row ID for auto-increment columns.
  * @param C A Connection object
  * @return The value of the rowid from the last insert statement
+ *
+ * @note This function works as expected for MySQL and SQLite.
+ * For PostgreSQL and Oracle, this function may not return the expected value.
+ * For these databases, it's recommended to use the RETURNING clause in your 
+ * INSERT statement instead.
+ *
+ * Example usage for different database systems:
+ *
+ * @code
+ * // For MySQL and SQLite:
+ * Connection_execute(con, "INSERT INTO users(name) VALUES(%s)", "Min-seo");
+ * long long id = Connection_lastRowId(con);
+ *
+ * // For PostgreSQL (assuming id is the auto increment column name):
+ * ResultSet_T r = Connection_executeQuery(con, "INSERT INTO users(name) VALUES(%s) RETURNING id", "Min-seo");
+ * long long id = ResultSet_next(r) ? ResultSet_getLLong(r, 1) : -1;
+ *
+ * // For Oracle:
+ * ResultSet_T r = Connection_executeQuery(con, "INSERT INTO users(name) VALUES(%s) RETURNING ROWID", "Min-seo");
+ * long long id = ResultSet_next(r) ? ResultSet_getLLong(r, 1) : -1;
+ * @endcode
+ *
+ * Using PreparedStatement:
+ *
+ * @code
+ * // For MySQL and SQLite:
+ * PreparedStatement_T p = Connection_prepareStatement(con, "INSERT INTO users(name) VALUES(?)");
+ * PreparedStatement_setString(p, 1, "Ji-eun");
+ * PreparedStatement_execute(p);
+ * long long id = Connection_lastRowId(con);
+ *
+ * // For PostgreSQL:
+ * PreparedStatement_T p = Connection_prepareStatement(con, "INSERT INTO users(name) VALUES(?) RETURNING id");
+ *
+ * // For Oracle:
+ * PreparedStatement_T p = Connection_prepareStatement(con, "INSERT INTO users(name) VALUES(?) RETURNING ROWID");
+ *
+ * // for both
+ * PreparedStatement_setString(p, 1, "Ji-eun");
+ * ResultSet_T r = PreparedStatement_executeQuery(p);
+ * long long id = ResultSet_next(r) ? ResultSet_getLLong(r, 1) : -1;
+ * @endcode
+ *
+ * @see ResultSet.h
  */
-long long Connection_lastRowId(T C);
+long long Connection_lastRowId(T C);long long Connection_lastRowId(T C);
 
 
 /**

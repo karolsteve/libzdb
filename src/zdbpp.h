@@ -1482,6 +1482,29 @@ namespace zdb {
         /**
          * @brief Gets the last inserted row ID for auto-increment columns.
          * @return The last inserted row ID.
+         *
+         * @note This function works as expected for MySQL and SQLite.
+         * For PostgreSQL and Oracle, this function may not return the expected value.
+         * For these databases, it's recommended to use the RETURNING clause in your
+         * INSERT statement instead.
+         *
+         * Example usage for different database systems:
+         *
+         * @code
+         * // For MySQL and SQLite:
+         * con.execute("INSERT INTO users(name) VALUES(?)", "Min-seo");
+         * long long id = con.lastRowId();
+         *
+         * // For PostgreSQL (assuming id is the auto increment column name):
+         * ResultSet r = con.executeQuery("INSERT INTO users(name) VALUES(?) RETURNING id", "Min-seo");
+         * long long id = r.next() ? r.getLLong(1) : -1;
+         *
+         * // For Oracle:
+         * ResultSet r = con.executeQuery("INSERT INTO users(name) VALUES(?) RETURNING ROWID", "Min-seo");
+         * long long id = r.next() ? r.getLLong(1) : -1;
+         * @endcode
+         *
+         * @see ResultSet
          */
         [[nodiscard]] long long lastRowId() noexcept { return Connection_lastRowId(t_); }
         

@@ -143,9 +143,9 @@ static void testPool(const char *testURL) {
                 // Assert that the last insert statement added one row
                 assert(Connection_rowsChanged(con) == 1);
                 /* Assert that last row id works for MySQL and SQLite. Neither Oracle nor PostgreSQL
-                 support last row id directly. The way to do this in PostgreSQL is to use 
-                 currval() or return the id on insert. */
-                if (IS(URL_getProtocol(url), "sqlite") || IS(URL_getProtocol(url), "mysql")) 
+                 support last row id directly. The way to do this in PostgreSQL is to return the id
+                 on insert and in libzdb execute the statement using executeQuery */
+                if (IS(URL_getProtocol(url), "sqlite") || IS(URL_getProtocol(url), "mysql"))
                         assert(Connection_lastRowId(con) == 12);
                 Connection_commit(con);
                 printf("\tResult: table zild_t successfully created\n");
