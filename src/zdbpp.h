@@ -1711,8 +1711,6 @@ namespace zdb {
      * For SQLite, the URL should specify a database file. SQLite uses [pragma commands](http://sqlite.org/pragma.html) for performance tuning and other special purpose
      * database commands. Pragma syntax in the form `name=value` can be added as properties to the URL. In addition to pragmas, the following properties are supported:
      *
-     * - `heap_limit=value` - Make SQLite auto-release unused memory
-     *   if memory usage goes above the specified value [KB].
      * - `serialized=true` - Make SQLite switch to serialized mode
      *   if value is true, otherwise multi-thread mode is used (the default).
      * - `shared-cache=true` - Make SQLite use shared-cache if value is true.

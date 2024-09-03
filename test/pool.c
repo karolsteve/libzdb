@@ -725,7 +725,7 @@ int main(void) {
         URL_T url;
         char buf[BSIZE];
         char *help = "Please enter a valid database connection URL and press ENTER\n"
-                    "E.g. sqlite:///tmp/sqlite.db?synchronous=off&heap_limit=2000\n"
+                    "E.g. sqlite:///tmp/sqlite.db?synchronous=normal\n"
                     "E.g. mysql://localhost:3306/test?user=root&password=root\n"
                     "E.g. postgresql://localhost:5432/test?user=root&password=root\n"
                     "E.g. oracle://scott:tiger@localhost:1521/servicename\n"

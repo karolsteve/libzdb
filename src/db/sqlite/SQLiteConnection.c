@@ -118,15 +118,7 @@ static bool _setProperties(T C, char **error) {
         if (properties) {
                 StringBuffer_clear(C->sb);
                 for (int i = 0; properties[i]; i++) {
-                        if (IS(properties[i], "heap_limit")) { // There is no PRAGMA for heap limit as of sqlite-3.7.0, so we make it a configurable property using "heap_limit" [kB]
-#if defined(HAVE_SQLITE3_SOFT_HEAP_LIMIT64)
-                                sqlite3_soft_heap_limit64(Str_parseInt(URL_getParameter(url, properties[i])) * 1024);
-#elif defined(HAVE_SQLITE3_SOFT_HEAP_LIMIT)
-                                sqlite3_soft_heap_limit(Str_parseInt(URL_getParameter(url, properties[i])) * 1024);
-#else
-                                DEBUG("heap_limit not supported by your sqlite3 version, please consider upgrading sqlite3\n");
-#endif
-                        } else if (Str_member(properties[i], handled_properties)) {
+                        if (Str_member(properties[i], handled_properties)) {
                                 continue; // Handled in _doConnect, ignore
                         } else {
                                 StringBuffer_append(C->sb, "PRAGMA %s = %s; ", properties[i], URL_getParameter(url, properties[i]));

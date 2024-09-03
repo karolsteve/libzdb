@@ -117,8 +117,6 @@
  * to the URL and will be set when the Connection is created. In addition
  * to pragmas, the following properties are supported:
  *
- * - `heap_limit=value` - Make SQLite auto-release unused memory
- *   if memory usage goes above the specified value [KB].
  * - `serialized=true` - Make SQLite switch to serialized mode
  *   if value is true, otherwise multi-thread mode is used (the default).
  * - `shared-cache=true` - Make SQLite use shared-cache if value is true.
