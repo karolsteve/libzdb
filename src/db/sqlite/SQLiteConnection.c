@@ -70,9 +70,20 @@ static int _options(URL_T url) {
         } else {
                 options |= SQLITE_OPEN_NOMUTEX;
         }
+        /*
+         * If ENABLE_SQLITE_SHARED_CACHE is defined during compilation,
+         * shared-cache mode is always enabled regardless of the URL parameter.
+         * This is specifically used for builds where shared-cache must always
+         * be on to ensure consistent behavior and prevent database lock issues.
+         * When not defined, the 'shared-cache' URL parameter controls this setting.
+         */
+#if ENABLE_SQLITE_SHARED_CACHE
+        options |= SQLITE_OPEN_SHAREDCACHE;
+#else
         if (Str_parseBool(URL_getParameter(url, "shared-cache"))) {
                 options |= SQLITE_OPEN_SHAREDCACHE;
         }
+#endif
         return options;
 }
 
