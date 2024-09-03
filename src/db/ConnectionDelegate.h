@@ -44,7 +44,6 @@ typedef struct Cop_T {
         void (*free)(T *C);
         bool (*ping)(T C);
         void (*setQueryTimeout)(T C, int ms);
-        bool (*beginTransaction)(T C);
         bool (*beginTransactionType)(T C, TRANSACTION_TYPE type);
         bool (*commit)(T C);
         bool (*rollback)(T C);

@@ -226,11 +226,6 @@ static bool _beginTransactionType(T C, TRANSACTION_TYPE type) {
 }
 
 
-static bool _beginTransaction(T C) {
-    return _beginTransactionType(C, TRANSACTION_DEFAULT);
-}
-
-
 static bool _commit(T C) {
         assert(C);
         C->lastError = mysql_query(C->db, "COMMIT;");
@@ -321,7 +316,6 @@ const struct Cop_T mysqlcops = {
         .free 		        = _free,
         .ping		        = _ping,
         .setQueryTimeout        = _setQueryTimeout,
-        .beginTransaction       = _beginTransaction,
         .beginTransactionType   = _beginTransactionType,
         .commit		        = _commit,
         .rollback	        = _rollback,
